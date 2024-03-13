@@ -1,7 +1,15 @@
 [package]
 name = "postmyrustache"
 version = "0.1.0"
-edition = "2024"
-
+edition = "2021"
 
 [dependencies]
+
+tokio = { version = "1.36.0", features = ["full"] }
+bytes = "1.0.1"
+opensrv-mysql = "0.7.0"
+async-trait = "=0.1.77"
+byteorder = "=1.5.0"
+chrono = "=0.4.35"
+mysql_common = "=0.32.0"
+nom = "=7.1.3"
