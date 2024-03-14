@@ -15,5 +15,3 @@ Easily run your MySQL application on PostgreSQL
 <a href="https://github.com/mikeshootzz/PostMyRustache/blob/main/LICENSE-AGPL" target="_blank">
     <img src="https://img.shields.io/badge/License-AGPLv3-blue.svg" alt="Package version">
 </a>
-<a>
-    <img src="">
