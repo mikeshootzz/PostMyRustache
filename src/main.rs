@@ -49,7 +49,22 @@ impl<W: AsyncWrite + Send + Unpin> AsyncMysqlShim<W> for Backend {
         sql: &'a str,
         results: QueryResultWriter<'a, W>,
     ) -> io::Result<()> {
-        println!("Executing SQL on PostgreSQL: {:?}", sql);
+        println!("Received SQL query: {:?}", sql);
+
+        // Check and handle MySQL-specific system variable queries or other incompatible queries.
+        if sql
+            .trim()
+            .eq_ignore_ascii_case("select @@version_comment limit 1")
+        {
+            println!("Intercepted MySQL-specific query, returning dummy response.");
+            return results.completed(OkResponse::default()).await;
+        } else if sql.trim().starts_with("select $$") {
+            // Intercepting a query that's not compatible with PostgreSQL.
+            println!("Intercepted query with unsupported syntax, returning dummy response.");
+            return results.completed(OkResponse::default()).await;
+        }
+
+        // Forward other queries to PostgreSQL.
         match self.pg_client.execute(sql, &[]).await {
             Ok(row_count) => {
                 println!("Query executed successfully, {} rows affected.", row_count);
