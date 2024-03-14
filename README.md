@@ -1,7 +1,7 @@
 # PostMyRustache
 
 <p align="center">
-  <a><img width="80%" src="./imgs/logo.png" alt="postmyrustage logo"></a>
+  <a><img src="./imgs/logo.png" alt="postmyrustage logo"></a>
 </p>
 <p align=center>
 
