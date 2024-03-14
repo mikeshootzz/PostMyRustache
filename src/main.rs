@@ -10,7 +10,9 @@ use tokio::net::TcpListener; // TcpListener from tokio for listening to TCP conn
 use async_trait::async_trait;
 use opensrv_mysql::*;
 
-// Additional imports for PostgreSQL support.
+// Additional imports for PostgreSQL support and environment variables handling.
+use dotenv::dotenv;
+use std::env;
 use tokio_postgres::{Client, NoTls};
 
 // Backend struct that will implement the AsyncMysqlShim trait and hold a PostgreSQL client.
@@ -83,9 +85,16 @@ impl<W: AsyncWrite + Send + Unpin> AsyncMysqlShim<W> for Backend {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    dotenv().ok(); // Load environment variables from .env file.
+
+    let db_host = env::var("DB_HOST").expect("DB_HOST must be set");
+    let db_user = env::var("DB_USER").expect("DB_USER must be set");
+    let db_password = env::var("DB_PASSWORD").expect("DB_PASSWORD must be set");
+
+    let connection_string = format!("host={} user={} password={}", db_host, db_user, db_password);
+
     // Connect to PostgreSQL database.
-    let (pg_client, connection) =
-        tokio_postgres::connect("host=localhost user=postgres password=1234", NoTls).await?;
+    let (pg_client, connection) = tokio_postgres::connect(&connection_string, NoTls).await?;
 
     // The connection object performs the communication with the database, so spawn it off to run on its own.
     tokio::spawn(async move {
