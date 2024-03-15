@@ -15,12 +15,15 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             asset_name_suffix: linux-x86_64
+            extension: ""
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             asset_name_suffix: windows-x86_64
+            extension: ".exe"
           - os: macos-latest
             target: aarch64-apple-darwin
             asset_name_suffix: macos-arm64
+            extension: ""
     steps:
       - uses: actions/checkout@v2
 
@@ -41,16 +44,13 @@ jobs:
       - name: Rename binary
         shell: bash
         run: |
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            mv target/${{ matrix.target }}/release/postmyrustache.exe target/${{ matrix.target }}/release/postmyrustache-${{ env.VERSION }}-${{ matrix.asset_name_suffix }}.exe
-          else
-            mv target/${{ matrix.target }}/release/postmyrustache target/${{ matrix.target }}/release/postmyrustache-${{ env.VERSION }}-${{ matrix.asset_name_suffix }}
+          mv target/${{ matrix.target }}/release/postmyrustache$([[ "${{ matrix.os }}" == "windows-latest" ]] && echo ".exe") target/${{ matrix.target }}/release/postmyrustache-${{ env.VERSION }}-${{ matrix.asset_name_suffix }}${{ matrix.extension }}
 
       - name: Upload binary for release
         uses: actions/upload-artifact@v2
         with:
           name: postmyrustache-${{ env.VERSION }}-${{ matrix.asset_name_suffix }}
-          path: target/${{ matrix.target }}/release/postmyrustache-${{ env.VERSION }}-${{ matrix.asset_name_suffix }}${{ if eq(matrix.os, 'windows-latest') }}.exe${{ endif }}
+          path: target/${{ matrix.target }}/release/postmyrustache-${{ env.VERSION }}-${{ matrix.asset_name_suffix }}${{ matrix.extension }}
 
   prepare_release:
     needs: build
