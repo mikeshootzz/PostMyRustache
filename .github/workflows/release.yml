@@ -1,73 +1,99 @@
-name: Release `postmyrustache` Binary
+name: Rust Project CI/CD
 
-on:
-  push:
-    tags:
-      - "v*"
+on: [push]
 
 jobs:
   build:
-    name: Build and release for ${{ matrix.os }} ${{ matrix.arch }}
-    runs-on: ubuntu-latest
+    name: Build on ${{ matrix.os }} for ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            asset_name: postmyrustache-linux
+            asset_name_suffix: linux-x86_64
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            asset_name: postmyrustache-windows.exe
+            asset_name_suffix: windows-x86_64
           - os: macos-latest
             target: aarch64-apple-darwin
-            asset_name: postmyrustache-macos
+            asset_name_suffix: macos-arm64
     steps:
       - uses: actions/checkout@v2
-      - name: Install Rust toolchain
+
+      - name: Extract version from Cargo.toml
+        id: cargo_version
+        run: echo "VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml)" >> $GITHUB_ENV
+
+      - name: Set up Rust
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: stable
           target: ${{ matrix.target }}
           override: true
+
       - name: Build binary
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release --target ${{ matrix.target }}
+        run: cargo build --release --target ${{ matrix.target }}
+
       - name: Rename binary
+        shell: bash
         run: |
-          mv target/${{ matrix.target }}/release/postmyrustache ${{ matrix.asset_name }}
-      - name: Upload release asset
+          mv target/${{ matrix.target }}/release/postmyrustache target/${{ matrix.target }}/release/postmyrustache-${{ env.VERSION }}-${{ matrix.asset_name_suffix }}
+
+      - name: Upload binary for release
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ matrix.asset_name }}
-          path: ${{ matrix.asset_name }}
+          name: postmyrustache-${{ env.VERSION }}-${{ matrix.asset_name_suffix }}
+          path: target/${{ matrix.target }}/release/postmyrustache-${{ env.VERSION }}-${{ matrix.asset_name_suffix }}
 
-  release:
+  prepare_release:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
       - name: Download all artifacts
         uses: actions/download-artifact@v2
         with:
           path: dist
+
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          tag_name: v${{ env.VERSION }}
+          release_name: Release v${{ env.VERSION }}
           draft: false
           prerelease: false
+
       - name: Upload assets to release
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/${{ matrix.asset_name }}
-          asset_name: ${{ matrix.asset_name }}
+          asset_path: ./dist/postmyrustache-${{ env.VERSION }}-linux-x86_64
+          asset_name: postmyrustache-${{ env.VERSION }}-linux-x86_64
+          asset_content_type: application/octet-stream
+
+      - uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./dist/postmyrustache-${{ env.VERSION }}-windows-x86_64.exe
+          asset_name: postmyrustache-${{ env.VERSION }}-windows-x86_64.exe
+          asset_content_type: application/octet-stream
+
+      - uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./dist/postmyrustache-${{ env.VERSION }}-macos-arm64
+          asset_name: postmyrustache-${{ env.VERSION }}-macos-arm64
           asset_content_type: application/octet-stream
