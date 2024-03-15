@@ -1,0 +1,17 @@
+version: "3.9"
+services:
+  postmyrustache:
+    image: ohmyrustache
+    restart: always
+    ports:
+      - 3306:3306
+    environment:
+      - DB_HOST=postgres
+      - DB_USER=postgres
+      - DB_PASSWORD=1234
+  postgres:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
