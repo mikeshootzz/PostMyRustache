@@ -85,7 +85,8 @@ jobs:
           asset_name: postmyrustache-${{ env.VERSION }}-linux-x86_64
           asset_content_type: application/octet-stream
 
-      - uses: actions/upload-release-asset@v1
+      - name: Upload Windows asset to release
+        uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -94,7 +95,8 @@ jobs:
           asset_name: postmyrustache-${{ env.VERSION }}-windows-x86_64.exe
           asset_content_type: application/octet-stream
 
-      - uses: actions/upload-release-asset@v1
+      - name: Upload macOS asset to release
+        uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
