@@ -1,6 +1,9 @@
 name: Rust Project CI/CD
 
-on: [push]
+on:
+  push:
+    branches:
+      - main
 
 permissions:
   contents: write
@@ -25,10 +28,14 @@ jobs:
             asset_name_suffix: macos-arm64
             extension: ""
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
 
       - name: Extract version from Cargo.toml
-        run: echo "VERSION=$(sed -n 's/^version = \"\([^\"]*\)\"/\1/p' Cargo.toml)" >> $GITHUB_ENV
+        run: |
+          VERSION=$(sed -n 's/^version = \"\([^\"]*\)\"/\1/p' Cargo.toml)
+          echo "VERSION: $VERSION"
+          echo "VERSION=$(sed -n 's/^version = \"\([^\"]*\)\"/\1/p' Cargo.toml)" >> $GITHUB_ENV
 
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
@@ -91,7 +98,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/postmyrustache-${{ env.VERSION }}--windows-x86_64.exe
+          asset_path: ./dist/postmyrustache-${{ env.VERSION }}-windows-x86_64.exe
           asset_name: postmyrustache-${{ env.VERSION }}-windows-x86_64.exe
           asset_content_type: application/octet-stream
 
