@@ -75,7 +75,7 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Upload assets to release
+      - name: Upload Linux asset to release
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -91,7 +91,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/postmyrustache-${{ env.VERSION }}-windows-x86_64.exe
+          asset_path: ./dist/postmyrustache-${{ env.VERSION }}--windows-x86_64.exe
           asset_name: postmyrustache-${{ env.VERSION }}-windows-x86_64.exe
           asset_content_type: application/octet-stream
 
