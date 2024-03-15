@@ -67,6 +67,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: Read version from Cargo.toml
+        id: read_version
+        run: |
+          VERSION=$(sed -n 's/^version = \"\([^\"]*\)\"/\1/p' Cargo.toml)
+          echo "VERSION: $VERSION"
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
       - name: Download all artifacts
         uses: actions/download-artifact@v2
         with:
