@@ -8,6 +8,7 @@ on:
       - "src/**"
       - "Dockerfile"
       - "Cargo.toml"
+      - ".github/workflows/docker-publish.yml"
 
 jobs:
   build_and_push:
