@@ -21,7 +21,6 @@ jobs:
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v2
         with:
-          registry: hub.docker.com
           username: postmyrustache
           password: ${{ secrets.CR_PAT }}
 
