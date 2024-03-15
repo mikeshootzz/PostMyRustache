@@ -18,6 +18,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Extract version from Cargo.toml
+        id: cargo_version
+        run: echo "::set-output name=version::$(awk -F '\"' '/^version =/ {print $2}' Cargo.toml)"
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v2
         with:
@@ -30,4 +34,6 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: postmyrustache/postmyrustache:latest
+          tags: |
+            postmyrustache/postmyrustache:${{ steps.cargo_version.outputs.version }}
+            postmyrustache/postmyrustache:latest
