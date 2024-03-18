@@ -1,86 +1,60 @@
-name: Rust Project CI/CD
+name: Build and Release
 
 on:
   push:
-    branches:
-      - main
-
-permissions:
-  contents: write
+    tags:
+      - "v*.*.*"
 
 jobs:
   build:
-    name: Build on ${{ matrix.os }} for ${{ matrix.target }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            asset_name_suffix: linux-x86_64
-            extension: ""
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            asset_name_suffix: windows-x86_64
-            extension: ".exe"
-          - os: macos-latest
-            target: aarch64-apple-darwin
-            asset_name_suffix: macos-arm64
-            extension: ""
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            rust_target: aarch64-apple-darwin
+            asset_name: postmyrustache-macos-arm.zip
+          - target: i686-unknown-linux-gnu
+            os: ubuntu-latest
+            rust_target: i686-unknown-linux-gnu
+            asset_name: postmyrustache-linux-x86.zip
+          - target: i686-pc-windows-gnu
+            os: windows-latest
+            rust_target: i686-pc-windows-gnu
+            asset_name: postmyrustache-windows-x86.zip
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-      - name: Extract version from Cargo.toml
-        shell: bash
-        run: |
-          VERSION=$(sed -n 's/^version = \"\([^\"]*\)\"/\1/p' Cargo.toml)
-          echo "VERSION: $VERSION"
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-
-      - name: Set up Rust
+      - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
-          profile: minimal
           toolchain: stable
-          target: ${{ matrix.target }}
+          target: ${{ matrix.rust_target }}
           override: true
 
       - name: Build binary
-        run: cargo build --release --target ${{ matrix.target }}
+        run: cargo build --target ${{ matrix.rust_target }} --release
 
-      - name: Rename binary
-        shell: bash
+      - name: Archive production artifacts
         run: |
-          mv target/${{ matrix.target }}/release/postmyrustache$([[ "${{ matrix.os }}" == "windows-latest" ]] && echo ".exe") target/${{ matrix.target }}/release/postmyrustache-${{ env.VERSION }}-${{ matrix.asset_name_suffix }}${{ matrix.extension }}
+          zip ${{ matrix.asset_name }} target/${{ matrix.rust_target }}/release/postmyrustache*
 
-      - name: Upload binary for release
+      - name: Upload artifact for release
         uses: actions/upload-artifact@v2
         with:
-          name: postmyrustache-${{ env.VERSION }}-${{ matrix.asset_name_suffix }}
-          path: target/${{ matrix.target }}/release/postmyrustache-${{ env.VERSION }}-${{ matrix.asset_name_suffix }}${{ matrix.extension }}
+          name: ${{ matrix.asset_name }}
+          path: ${{ matrix.asset_name }}
 
-  prepare_release:
+  release:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Read version from Cargo.toml
-        id: read_version
-        run: |
-          VERSION=$(sed -n 's/^version = \"\([^\"]*\)\"/\1/p' Cargo.toml)
-          echo "VERSION: $VERSION"
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-
       - name: Download all artifacts
         uses: actions/download-artifact@v2
         with:
-          path: dist
-
-      - name: List files in dist
-        run: ls -R dist
+          path: .
 
       - name: Create Release
         id: create_release
@@ -88,37 +62,37 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: v${{ env.VERSION }}
-          release_name: Release v${{ env.VERSION }}
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref_name }}
           draft: false
           prerelease: false
 
-      - name: Upload Linux asset to release
+      - name: Upload Release Asset macOS ARM
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/postmyrustache-${{ env.VERSION }}-linux-x86_64
-          asset_name: postmyrustache-${{ env.VERSION }}-linux-x86_64
-          asset_content_type: application/octet-stream
+          asset_path: ./postmyrustache-macos-arm.zip
+          asset_name: postmyrustache-macos-arm.zip
+          asset_content_type: application/zip
 
-      - name: Upload Windows asset to release
+      - name: Upload Release Asset Linux x86
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/postmyrustache-${{ env.VERSION }}-windows-x86_64.exe
-          asset_name: postmyrustache-${{ env.VERSION }}-windows-x86_64.exe
-          asset_content_type: application/octet-stream
+          asset_path: ./postmyrustache-linux-x86.zip
+          asset_name: postmyrustache-linux-x86.zip
+          asset_content_type: application/zip
 
-      - name: Upload macOS asset to release
+      - name: Upload Release Asset Windows x86
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/postmyrustache-${{ env.VERSION }}-macos-arm64
-          asset_name: postmyrustache-${{ env.VERSION }}-macos-arm64
-          asset_content_type: application/octet-stream
+          asset_path: ./postmyrustache-windows-x86.zip
+          asset_name: postmyrustache-windows-x86.zip
+          asset_content_type: application/zip
