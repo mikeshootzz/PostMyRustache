@@ -42,6 +42,7 @@ jobs:
         run: cargo build --target ${{ matrix.rust_target }} --release
 
       - name: Archive production artifacts
+        shell: bash
         run: |
           if [[ "${{ matrix.target }}" == "x86_64-pc-windows-msvc" ]]; then
             7z a ${{ matrix.asset_name }} target/${{ matrix.rust_target }}/release/postmyrustache.exe
