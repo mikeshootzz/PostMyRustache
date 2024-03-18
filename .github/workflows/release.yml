@@ -17,11 +17,11 @@ jobs:
             asset_name: postmyrustache-macos-arm.zip
           - target: i686-unknown-linux-gnu
             os: ubuntu-latest
-            rust_target: i686-unknown-linux-gnu
+            rust_target: x86_64-unknown-linux-gnu
             asset_name: postmyrustache-linux-x86.zip
           - target: i686-pc-windows-gnu
             os: windows-latest
-            rust_target: i686-pc-windows-gnu
+            rust_target: x86_64-pc-windows-msvc
             asset_name: postmyrustache-windows-x86.zip
 
     steps:
