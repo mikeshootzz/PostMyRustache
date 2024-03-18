@@ -7,14 +7,20 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            rust_target: aarch64-apple-darwin
+            asset_name: postmyrustache-macos-arm64.zip
           - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
             rust_target: x86_64-unknown-linux-gnu
             asset_name: postmyrustache-linux-x86_64.zip
           - target: x86_64-pc-windows-msvc
+            os: windows-latest
             rust_target: x86_64-pc-windows-msvc
             asset_name: postmyrustache-windows-x86_64.zip
 
@@ -28,13 +34,17 @@ jobs:
           target: ${{ matrix.rust_target }}
           override: true
 
+      - name: Install Visual Studio Build Tools for Windows
+        if: matrix.os == 'windows-latest'
+        uses: ilammy/msvc-dev-cmd@v1
+
       - name: Build binary
         run: cargo build --target ${{ matrix.rust_target }} --release
 
       - name: Archive production artifacts
         run: |
-          if [ "${{ matrix.target }}" = "x86_64-pc-windows-msvc" ]; then
-            zip ${{ matrix.asset_name }} target/${{ matrix.rust_target }}/release/postmyrustache.exe
+          if [[ "${{ matrix.target }}" == "x86_64-pc-windows-msvc" ]]; then
+            7z a ${{ matrix.asset_name }} target/${{ matrix.rust_target }}/release/postmyrustache.exe
           else
             zip ${{ matrix.asset_name }} target/${{ matrix.rust_target }}/release/postmyrustache
           fi
@@ -64,6 +74,16 @@ jobs:
           release_name: Release ${{ github.ref_name }}
           draft: false
           prerelease: false
+
+      - name: Upload Release Asset macOS ARM64
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./postmyrustache-macos-arm64.zip
+          asset_name: postmyrustache-macos-arm64.zip
+          asset_content_type: application/zip
 
       - name: Upload Release Asset Linux x86_64
         uses: actions/upload-release-asset@v1
