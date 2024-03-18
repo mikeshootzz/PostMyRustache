@@ -11,18 +11,12 @@ jobs:
     strategy:
       matrix:
         include:
-          - target: aarch64-apple-darwin
-            os: macos-latest
-            rust_target: aarch64-apple-darwin
-            asset_name: postmyrustache-macos-arm.zip
-          - target: i686-unknown-linux-gnu
-            os: ubuntu-latest
+          - target: x86_64-unknown-linux-gnu
             rust_target: x86_64-unknown-linux-gnu
-            asset_name: postmyrustache-linux-x86.zip
-          - target: i686-pc-windows-gnu
-            os: windows-latest
+            asset_name: postmyrustache-linux-x86_64.zip
+          - target: x86_64-pc-windows-msvc
             rust_target: x86_64-pc-windows-msvc
-            asset_name: postmyrustache-windows-x86.zip
+            asset_name: postmyrustache-windows-x86_64.zip
 
     steps:
       - uses: actions/checkout@v2
@@ -39,7 +33,11 @@ jobs:
 
       - name: Archive production artifacts
         run: |
-          zip ${{ matrix.asset_name }} target/${{ matrix.rust_target }}/release/postmyrustache*
+          if [ "${{ matrix.target }}" = "x86_64-pc-windows-msvc" ]; then
+            zip ${{ matrix.asset_name }} target/${{ matrix.rust_target }}/release/postmyrustache.exe
+          else
+            zip ${{ matrix.asset_name }} target/${{ matrix.rust_target }}/release/postmyrustache
+          fi
 
       - name: Upload artifact for release
         uses: actions/upload-artifact@v2
@@ -67,32 +65,22 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Upload Release Asset macOS ARM
+      - name: Upload Release Asset Linux x86_64
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./postmyrustache-macos-arm.zip
-          asset_name: postmyrustache-macos-arm.zip
+          asset_path: ./postmyrustache-linux-x86_64.zip
+          asset_name: postmyrustache-linux-x86_64.zip
           asset_content_type: application/zip
 
-      - name: Upload Release Asset Linux x86
+      - name: Upload Release Asset Windows x86_64
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./postmyrustache-linux-x86.zip
-          asset_name: postmyrustache-linux-x86.zip
-          asset_content_type: application/zip
-
-      - name: Upload Release Asset Windows x86
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./postmyrustache-windows-x86.zip
-          asset_name: postmyrustache-windows-x86.zip
+          asset_path: ./postmyrustache-windows-x86_64.zip
+          asset_name: postmyrustache-windows-x86_64.zip
           asset_content_type: application/zip
