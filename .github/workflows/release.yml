@@ -76,6 +76,9 @@ jobs:
           draft: false
           prerelease: false
 
+      - name: Debug - List files in the directory
+        run: ls -la
+
       - name: Upload Release Asset macOS ARM64
         uses: actions/upload-release-asset@v1
         env:
