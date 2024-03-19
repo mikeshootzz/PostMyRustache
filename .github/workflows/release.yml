@@ -85,7 +85,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./postmyrustache-macos-arm64.zip
+          asset_path: ./postmyrustache-macos-arm64.zip/postmyrustache-macos-arm64.zip
           asset_name: postmyrustache-macos-arm64.zip
           asset_content_type: application/zip
 
@@ -95,7 +95,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./postmyrustache-linux-x86_64.zip
+          asset_path: ./postmyrustache-linux-x86_64.zip/postmyrustache-linux-x86_64.zip
           asset_name: postmyrustache-linux-x86_64.zip
           asset_content_type: application/zip
 
@@ -105,6 +105,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./postmyrustache-windows-x86_64.zip
+          asset_path: ./postmyrustache-windows-x86_64.zip/postmyrustache-windows-x86_64.zip
           asset_name: postmyrustache-windows-x86_64.zip
           asset_content_type: application/zip
