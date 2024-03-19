@@ -2,13 +2,8 @@ name: Build and Push PostMyRustache Docker image
 
 on:
   push:
-    branches:
-      - main
-    paths:
-      - "src/**"
-      - "Dockerfile"
-      - "Cargo.toml"
-      - ".github/workflows/docker-publish.yml"
+    tags:
+      - "v*.*.*"
 
 jobs:
   build_and_push:
