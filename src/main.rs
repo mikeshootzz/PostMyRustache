@@ -12,7 +12,7 @@ use opensrv_mysql::*;
 
 // Additional imports for PostgreSQL support and environment variables handling.
 use dotenv::dotenv;
-use std::env; 
+use std::env;
 use tokio_postgres::{Client, NoTls};
 
 // Backend struct that will implement the AsyncMysqlShim trait and hold a PostgreSQL client.
@@ -70,7 +70,13 @@ impl<W: AsyncWrite + Send + Unpin> AsyncMysqlShim<W> for Backend {
         match self.pg_client.execute(sql, &[]).await {
             Ok(row_count) => {
                 println!("Query executed successfully, {} rows affected.", row_count);
-                results.completed(OkResponse::default()).await
+
+                // Create a default OkResponse and modify the affected_rows field
+                let mut response = OkResponse::default();
+                response.affected_rows = row_count; // Set the actual number of affected rows
+
+                // Use this updated response
+                results.completed(response).await
             }
             Err(e) => {
                 println!("Error executing query: {:?}", e);
