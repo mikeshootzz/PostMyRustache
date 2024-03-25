@@ -71,8 +71,11 @@ impl<W: AsyncWrite + Send + Unpin> AsyncMysqlShim<W> for Backend {
                 println!("Query executed successfully, {} rows affected.", row_count);
 
                 if sql.trim().to_lowercase().starts_with("select") {
+                    println!("SELECT query was found");
                     // Start the resultset response with columns information
                     let mut row_writer = results.start(&[]).await?;
+                    let pg_results_raw = self.pg_client.execute(sql, &[]).await;
+                    println!("{:?}", pg_results_raw);
 
                     // Execute the same query against PostgreSQL to get the results
                     let pg_results = self.pg_client.query(sql, &[]).await.map_err(|e| {
@@ -82,13 +85,17 @@ impl<W: AsyncWrite + Send + Unpin> AsyncMysqlShim<W> for Backend {
                         )
                     })?;
 
+                    println!("result: {:?}", pg_results);
+
                     // Iterate over rows and send each row to the MySQL client
                     for row in pg_results {
                         let mut values = Vec::new();
                         for i in 0..row.len() {
-                            // Assuming that you're sending data as strings, adjust accordingly
-                            values.push(format!("{}", row.get::<usize, String>(i)));
+                            let value = format!("{}", row.get::<usize, String>(i)); // Adjust based on actual data type
+                            println!("Value being sent: {}", value); // Debugging line
+                            values.push(value);
                         }
+                        println!("Sending row to MySQL client: {:?}", values); // Debugging line
                         row_writer.write_row(values).await?;
                     }
 
