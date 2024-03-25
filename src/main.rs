@@ -20,7 +20,6 @@ struct Backend {
     pg_client: Arc<Client>,
 }
 
-// Implementation of the AsyncMysqlShim trait for the Backend.
 #[async_trait]
 impl<W: AsyncWrite + Send + Unpin> AsyncMysqlShim<W> for Backend {
     type Error = io::Error;
@@ -30,16 +29,16 @@ impl<W: AsyncWrite + Send + Unpin> AsyncMysqlShim<W> for Backend {
         _: &'a str,
         info: StatementMetaWriter<'a, W>,
     ) -> io::Result<()> {
-        info.reply(42, &[], &[]).await
+        todo!()
     }
 
     async fn on_execute<'a>(
         &'a mut self,
         _: u32,
         _: opensrv_mysql::ParamParser<'a>,
-        results: QueryResultWriter<'a, W>,
+        _: QueryResultWriter<'a, W>,
     ) -> io::Result<()> {
-        results.completed(OkResponse::default()).await
+        todo!()
     }
 
     async fn on_close(&mut self, _: u32) {
@@ -71,21 +70,47 @@ impl<W: AsyncWrite + Send + Unpin> AsyncMysqlShim<W> for Backend {
             Ok(row_count) => {
                 println!("Query executed successfully, {} rows affected.", row_count);
 
-                // Create a default OkResponse and modify the affected_rows field
-                let mut response = OkResponse::default();
-                response.affected_rows = row_count; // Set the actual number of affected rows
+                if sql.trim().to_lowercase().starts_with("select") {
+                    // Start the resultset response with columns information
+                    let mut row_writer = results.start(&[]).await?;
 
-                // Use this updated response
-                results.completed(response).await
+                    // Execute the same query against PostgreSQL to get the results
+                    let pg_results = self.pg_client.query(sql, &[]).await.map_err(|e| {
+                        io::Error::new(
+                            io::ErrorKind::Other,
+                            format!("Error executing query: {:?}", e),
+                        )
+                    })?;
+
+                    // Iterate over rows and send each row to the MySQL client
+                    for row in pg_results {
+                        let mut values = Vec::new();
+                        for i in 0..row.len() {
+                            // Assuming that you're sending data as strings, adjust accordingly
+                            values.push(format!("{}", row.get::<usize, String>(i)));
+                        }
+                        row_writer.write_row(values).await?;
+                    }
+
+                    // Complete the resultset response
+                    row_writer.finish().await?;
+                } else {
+                    // For non-SELECT queries, send response indicating rows affected
+                    let mut response = OkResponse::default();
+                    response.affected_rows = row_count; // Set the actual number of affected rows
+                    results.completed(response).await?;
+                }
             }
             Err(e) => {
                 println!("Error executing query: {:?}", e);
-                Err(io::Error::new(
+                return Err(io::Error::new(
                     io::ErrorKind::Other,
                     "Failed to execute query.",
-                ))
+                ));
             }
         }
+
+        Ok(())
     }
 }
 
