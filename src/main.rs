@@ -87,20 +87,28 @@ impl<W: AsyncWrite + Send + Unpin> AsyncMysqlShim<W> for Backend {
 
                     println!("result: {:?}", pg_results);
 
-                    // Iterate over rows and send each row to the MySQL client
-                    for row in pg_results {
-                        let mut values = Vec::new();
-                        for i in 0..row.len() {
-                            let value = format!("{}", row.get::<usize, String>(i)); // Adjust based on actual data type
-                            println!("Value being sent: {}", value); // Debugging line
-                            values.push(value);
+                    if let Some(first_row) = pg_results.get(0) {
+                        let columns = first_row.columns();
+                        let column_names: Vec<String> = columns.iter().map(|col| col.name().to_string()).collect();
+
+                        // Iterate over rows and send each row to the MySQL client
+                        for row in &pg_results {
+                            let mut values = Vec::new();
+                            for (i, column_name) in column_names.iter().enumerate() {
+                                let value = format!("{}", row.get::<usize, String>(i)); // Adjust based on actual data type
+                                println!("Column: '{}', Value being sent: {}", column_name, value); // Debugging line with column name
+                                values.push(value);
+                            }
+                            println!("Sending row to MySQL client: {:?}", values); // Debugging line
+                            row_writer.write_row(values).await?;
                         }
-                        println!("Sending row to MySQL client: {:?}", values); // Debugging line
-                        row_writer.write_row(values).await?;
+                    
+                        // Complete the resultset response
+                        row_writer.finish().await?;
                     }
 
+
                     // Complete the resultset response
-                    row_writer.finish().await?;
                 } else {
                     // For non-SELECT queries, send response indicating rows affected
                     let mut response = OkResponse::default();
