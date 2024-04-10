@@ -9,6 +9,7 @@ use tokio::net::TcpListener; // TcpListener from tokio for listening to TCP conn
 // Importing necessary components from the opensrv_mysql crate.
 use async_trait::async_trait;
 use opensrv_mysql::*;
+use mysql_common as myc;
 
 // Additional imports for PostgreSQL support and environment variables handling.
 use dotenv::dotenv;
@@ -73,7 +74,7 @@ impl<W: AsyncWrite + Send + Unpin> AsyncMysqlShim<W> for Backend {
                 if sql.trim().to_lowercase().starts_with("select") {
                     println!("SELECT query was found");
                     // Start the resultset response with columns information
-                    let mut row_writer = results.start(&[]).await?;
+                    //let mut row_writer = results.start(&[]).await?;
                     let pg_results_raw = self.pg_client.execute(sql, &[]).await;
                     println!("{:?}", pg_results_raw);
 
@@ -97,14 +98,21 @@ impl<W: AsyncWrite + Send + Unpin> AsyncMysqlShim<W> for Backend {
                             for (i, column_name) in column_names.iter().enumerate() {
                                 let value = format!("{}", row.get::<usize, String>(i)); // Adjust based on actual data type
                                 println!("Column: '{}', Value being sent: {}", column_name, value); // Debugging line with column name
+                                let cols = &[Column {
+                                    table: String::new(),
+                                    column: column_name.to_string(),
+                                    coltype: myc::constants::ColumnType::MYSQL_TYPE_LONG,
+                                    colflags: myc::constants::ColumnFlags::UNSIGNED_FLAG,
+                                }];
+                                let mut w = results.start(cols).await?;
                                 values.push(value);
+                                w.write_row(values).await?;
+                                w.finish_with_info("ExtraInfo").await;
                             }
-                            println!("Sending row to MySQL client: {:?}", values); // Debugging line
-                            row_writer.write_row(values).await?;
+                           // println!("Sending row to MySQL client: {:?}", values); // Debugging line
                         }
                     
                         // Complete the resultset response
-                        row_writer.finish().await?;
                     }
 
 
