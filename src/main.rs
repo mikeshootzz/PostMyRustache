@@ -121,6 +121,18 @@ impl<W: AsyncWrite + Send + Unpin> AsyncMysqlShim<W> for Backend {
                                 let value: String = row.get(i);
                                 myc::Value::Bytes(value.into_bytes())
                             },
+                            tokio_postgres::types::Type::BOOL => {
+                                let value: bool = row.get(i);
+                                myc::Value::Bytes(value.to_string().into_bytes())
+                            },
+                            tokio_postgres::types::Type::FLOAT4 => {
+                                let value: f32 = row.get(i);
+                                myc::Value::Float(value)
+                            },
+                            tokio_postgres::types::Type::FLOAT8 => {
+                                let value: f64 = row.get(i);
+                                myc::Value::Double(value)
+                            },
                             // Add more match arms for other types as needed
                             _ => return Err(io::Error::new(io::ErrorKind::Other, "Unsupported type")),
                         };
