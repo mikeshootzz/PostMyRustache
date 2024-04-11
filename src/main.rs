@@ -124,7 +124,6 @@ impl<W: AsyncWrite + Send + Unpin> AsyncMysqlShim<W> for Backend {
             let mut w = results.start(&cols).await?;
             w.write_row(values.clone()).await?;
             println!("Values: {:?}", values);
-            w.write_row(values.clone()).await?;
             w.finish_with_info("ExtraInfo").await;
 
 
