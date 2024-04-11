@@ -96,38 +96,31 @@ impl<W: AsyncWrite + Send + Unpin> AsyncMysqlShim<W> for Backend {
             if let Some(first_row) = pg_results.get(0) {
                 let columns = first_row.columns();
                 column_names = columns.iter().map(|col| col.name().to_string()).collect();
-
+            
+                // Populate cols vector here, outside of the row iteration loop
+                for column_name in &column_names {
+                    cols.push(Column {
+                        table: String::new(),
+                        column: column_name.to_string(),
+                        coltype: myc::constants::ColumnType::MYSQL_TYPE_LONG,
+                        colflags: myc::constants::ColumnFlags::UNSIGNED_FLAG,
+                    });
+                }
+            
                 // Iterate over rows and send each row to the MySQL client
+                let mut w = results.start(&cols).await?;
                 for row in &pg_results {
                     let mut row_values = Vec::new();
                     for (i, column_name) in column_names.iter().enumerate() {
                         let value = format!("{}", row.get::<usize, String>(i)); // Adjust based on actual data type
                         println!("Column: '{}', Value being sent: {}", column_name, value); // Debugging line
-                        cols.push(Column {
-                            table: String::new(),
-                            column: column_name.to_string(),
-                            coltype: myc::constants::ColumnType::MYSQL_TYPE_LONG,
-                            colflags: myc::constants::ColumnFlags::UNSIGNED_FLAG,
-                        });
                         row_values.push(value);
                     }
-                    values.push(row_values.join(","));
+                    // Write each row separately
+                    w.write_row(row_values).await?;
                 }
+                w.finish().await?;
             }
-            
-                // Complete the resultset response
-            
-
-            // Now you can use column_names here outside the loop
-            println!("Column names: {:?}", column_names);
-            println!("Column: {:?}", cols);
-            let mut w = results.start(&cols).await?;
-            w.write_row(values.clone()).await?;
-            println!("Values: {:?}", values);
-            w.finish().await?;
-
-
-                    // Complete the resultset response
                 } else {
                     // For non-SELECT queries, send response indicating rows affected
                     let mut response = OkResponse::default();
