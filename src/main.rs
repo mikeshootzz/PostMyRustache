@@ -1,5 +1,5 @@
 // Standard I/O module for basic input and output operations.
-use std::{io, result};
+use std::io;
 use std::sync::Arc; // For shared ownership of the PostgreSQL client.
 
 // AsyncWrite trait from tokio, required for asynchronous write operations.
@@ -28,7 +28,7 @@ impl<W: AsyncWrite + Send + Unpin> AsyncMysqlShim<W> for Backend {
     async fn on_prepare<'a>(
         &'a mut self,
         _: &'a str,
-        info: StatementMetaWriter<'a, W>,
+        _info: StatementMetaWriter<'a, W>,
     ) -> io::Result<()> {
         todo!()
     }
@@ -124,7 +124,7 @@ impl<W: AsyncWrite + Send + Unpin> AsyncMysqlShim<W> for Backend {
             let mut w = results.start(&cols).await?;
             w.write_row(values.clone()).await?;
             println!("Values: {:?}", values);
-            w.finish_with_info("ExtraInfo").await;
+            w.finish().await?;
 
 
                     // Complete the resultset response
