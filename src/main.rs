@@ -1,5 +1,5 @@
 // Standard I/O module for basic input and output operations.
-use std::io;
+use std::{io, result};
 use std::sync::Arc; // For shared ownership of the PostgreSQL client.
 
 // AsyncWrite trait from tokio, required for asynchronous write operations.
@@ -68,52 +68,64 @@ impl<W: AsyncWrite + Send + Unpin> AsyncMysqlShim<W> for Backend {
 
         // Forward other queries to PostgreSQL.
         match self.pg_client.execute(sql, &[]).await {
-            Ok(row_count) => {
-                println!("Query executed successfully, {} rows affected.", row_count);
+    Ok(row_count) => {
+        println!("Query executed successfully, {} rows affected.", row_count);
 
-                if sql.trim().to_lowercase().starts_with("select") {
-                    println!("SELECT query was found");
-                    // Start the resultset response with columns information
-                    //let mut row_writer = results.start(&[]).await?;
-                    let pg_results_raw = self.pg_client.execute(sql, &[]).await;
-                    println!("{:?}", pg_results_raw);
+        if sql.trim().to_lowercase().starts_with("select") {
+            println!("SELECT query was found");
+            // Start the resultset response with columns information
+            //let mut row_writer = results.start(&[]).await?;
+            let pg_results_raw = self.pg_client.execute(sql, &[]).await;
+            println!("{:?}", pg_results_raw);
 
-                    // Execute the same query against PostgreSQL to get the results
-                    let pg_results = self.pg_client.query(sql, &[]).await.map_err(|e| {
-                        io::Error::new(
-                            io::ErrorKind::Other,
-                            format!("Error executing query: {:?}", e),
-                        )
-                    })?;
+            // Execute the same query against PostgreSQL to get the results
+            let pg_results = self.pg_client.query(sql, &[]).await.map_err(|e| {
+                io::Error::new(
+                    io::ErrorKind::Other,
+                    format!("Error executing query: {:?}", e),
+                )
+            })?;
 
-                    println!("result: {:?}", pg_results);
+            println!("result: {:?}", pg_results);
 
-                    if let Some(first_row) = pg_results.get(0) {
-                        let columns = first_row.columns();
-                        let column_names: Vec<String> = columns.iter().map(|col| col.name().to_string()).collect();
+            let mut column_names: Vec<String> = Vec::new();
+            let mut cols: Vec<Column> = Vec::new();
+            let mut values: Vec<String> = Vec::new();
 
-                        // Iterate over rows and send each row to the MySQL client
-                        for row in &pg_results {
-                            let mut values = Vec::new();
-                            for (i, column_name) in column_names.iter().enumerate() {
-                                let value = format!("{}", row.get::<usize, String>(i)); // Adjust based on actual data type
-                                println!("Column: '{}', Value being sent: {}", column_name, value); // Debugging line with column name
-                                let cols = &[Column {
-                                    table: String::new(),
-                                    column: column_name.to_string(),
-                                    coltype: myc::constants::ColumnType::MYSQL_TYPE_LONG,
-                                    colflags: myc::constants::ColumnFlags::UNSIGNED_FLAG,
-                                }];
-                                let mut w = results.start(cols).await?;
-                                values.push(value);
-                                w.write_row(values).await?;
-                                w.finish_with_info("ExtraInfo").await;
-                            }
-                           // println!("Sending row to MySQL client: {:?}", values); // Debugging line
-                        }
-                    
-                        // Complete the resultset response
+
+            if let Some(first_row) = pg_results.get(0) {
+                let columns = first_row.columns();
+                column_names = columns.iter().map(|col| col.name().to_string()).collect();
+
+                // Iterate over rows and send each row to the MySQL client
+                for row in &pg_results {
+                    let mut row_values = Vec::new();
+                    for (i, column_name) in column_names.iter().enumerate() {
+                        let value = format!("{}", row.get::<usize, String>(i)); // Adjust based on actual data type
+                        println!("Column: '{}', Value being sent: {}", column_name, value); // Debugging line
+                        cols.push(Column {
+                            table: String::new(),
+                            column: column_name.to_string(),
+                            coltype: myc::constants::ColumnType::MYSQL_TYPE_LONG,
+                            colflags: myc::constants::ColumnFlags::UNSIGNED_FLAG,
+                        });
+                        row_values.push(value);
                     }
+                    values.push(row_values.join(","));
+                }
+            }
+            
+                // Complete the resultset response
+            
+
+            // Now you can use column_names here outside the loop
+            println!("Column names: {:?}", column_names);
+            println!("Column: {:?}", cols);
+            let mut w = results.start(&cols).await?;
+            w.write_row(values.clone()).await?;
+            println!("Values: {:?}", values);
+            w.write_row(values.clone()).await?;
+            w.finish_with_info("ExtraInfo").await;
 
 
                     // Complete the resultset response
