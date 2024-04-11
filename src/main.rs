@@ -111,7 +111,19 @@ impl<W: AsyncWrite + Send + Unpin> AsyncMysqlShim<W> for Backend {
                 for row in &pg_results {
                     let mut row_values = Vec::new();
                     for (i, column_name) in column_names.iter().enumerate() {
-                        let value = format!("{}", row.get::<usize, String>(i)); // Adjust based on actual data type
+                        let column_type = row.columns()[i].type_();
+                        let value = match *column_type {
+                            tokio_postgres::types::Type::INT4 => {
+                                let value: i32 = row.get(i);
+                                value.to_string()
+                            },
+                            tokio_postgres::types::Type::VARCHAR => {
+                                let value: String = row.get(i);
+                                value
+                            },
+                            // Add more match arms for other types as needed
+                            _ => return Err(io::Error::new(io::ErrorKind::Other, "Unsupported type")),
+                        };
                         println!("Column: '{}', Value being sent: {}", column_name, value); // Debugging line
                         row_values.push(value);
                     }
