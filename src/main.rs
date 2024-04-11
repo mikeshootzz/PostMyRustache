@@ -115,18 +115,18 @@ impl<W: AsyncWrite + Send + Unpin> AsyncMysqlShim<W> for Backend {
                         let value = match *column_type {
                             tokio_postgres::types::Type::INT4 => {
                                 let value: i32 = row.get(i);
-                                value.to_string()
+                                myc::Value::Int(value.into())
                             },
                             tokio_postgres::types::Type::VARCHAR => {
                                 let value: String = row.get(i);
-                                value
+                                myc::Value::Bytes(value.into_bytes())
                             },
                             // Add more match arms for other types as needed
                             _ => return Err(io::Error::new(io::ErrorKind::Other, "Unsupported type")),
                         };
-                        println!("Column: '{}', Value being sent: {}", column_name, value); // Debugging line
+                        println!("Column: '{}', Value being sent: {:?}", column_name, value); // Debugging line
                         row_values.push(value);
-                    }
+}
                     // Write each row separately
                     w.write_row(row_values).await?;
                 }
