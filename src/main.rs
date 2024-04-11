@@ -90,7 +90,6 @@ impl<W: AsyncWrite + Send + Unpin> AsyncMysqlShim<W> for Backend {
 
             let mut column_names: Vec<String> = Vec::new();
             let mut cols: Vec<Column> = Vec::new();
-            let mut values: Vec<String> = Vec::new();
 
 
             if let Some(first_row) = pg_results.get(0) {
