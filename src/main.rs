@@ -74,13 +74,26 @@ impl<W: AsyncWrite + Send + Unpin> AsyncMysqlShim<W> for Backend {
                     return results.completed(OkResponse::default()).await;
                 },
                 Err(_) => {
-                    let create_db = format!("CREATE DATABASE {}", db_name);
-                    if let Err(err) = self.pg_client.execute(&create_db, &[]).await {
-                        println!("Error creating database: {:?}", err);
-                    }
+                    // Handle error...
+                }
+            } // Add closing brace here
+        } else if sql.trim().to_lowercase().contains("database()") {
+            // Intercepting a query that contains the MySQL-specific `database()` function.
+            let modified_sql = sql.to_lowercase().replace("database()", "current_database()");
+            match self.pg_client.execute(&modified_sql, &[]).await {
+                Ok(_) => {
+                    println!("Query executed successfully.");
+                    return results.completed(OkResponse::default()).await;
+                },
+                Err(err) => {
+                    println!("Error executing query: {:?}", err);
+                    return Err(io::Error::new(io::ErrorKind::Other, "Failed to execute query."));
                 }
             }
         }
+    
+        // Rest of the function...
+
     
         // Forward other queries to PostgreSQL.
         match self.pg_client.execute(sql, &[]).await {
