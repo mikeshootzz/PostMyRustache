@@ -52,7 +52,7 @@ impl<W: AsyncWrite + Send + Unpin> AsyncMysqlShim<W> for Backend {
         results: QueryResultWriter<'a, W>,
     ) -> io::Result<()> {
         println!("Received SQL query: {:?}", sql);
-
+    
         // Check and handle MySQL-specific system variable queries or other incompatible queries.
         if sql
             .trim()
@@ -64,15 +64,31 @@ impl<W: AsyncWrite + Send + Unpin> AsyncMysqlShim<W> for Backend {
             // Intercepting a query that's not compatible with PostgreSQL.
             println!("Intercepted query with unsupported syntax, returning dummy response.");
             return results.completed(OkResponse::default()).await;
+        } else if sql.trim().to_lowercase().starts_with("create database if not exists") {
+            // Intercepting a MySQL-specific CREATE DATABASE IF NOT EXISTS query.
+            let db_name = sql.trim().split_whitespace().last().unwrap();
+            let check_db_exists = format!("SELECT 1 FROM pg_database WHERE datname = '{}'", db_name);
+            match self.pg_client.execute(&check_db_exists, &[]).await {
+                Ok(_) => {
+                    println!("Database {} already exists, skipping creation.", db_name);
+                    return results.completed(OkResponse::default()).await;
+                },
+                Err(_) => {
+                    let create_db = format!("CREATE DATABASE {}", db_name);
+                    if let Err(err) = self.pg_client.execute(&create_db, &[]).await {
+                        println!("Error creating database: {:?}", err);
+                    }
+                }
+            }
         }
-
+    
         // Forward other queries to PostgreSQL.
         match self.pg_client.execute(sql, &[]).await {
-    Ok(row_count) => {
-        println!("Query executed successfully, {} rows affected.", row_count);
-
-        if sql.trim().to_lowercase().starts_with("select") {
-            println!("SELECT query was found");
+            Ok(row_count) => {
+                println!("Query executed successfully, {} rows affected.", row_count);
+    
+                if sql.trim().to_lowercase().starts_with("select") {
+                    println!("SELECT query was found"); 
             // Start the resultset response with columns information
             //let mut row_writer = results.start(&[]).await?;
             let pg_results_raw = self.pg_client.execute(sql, &[]).await;
