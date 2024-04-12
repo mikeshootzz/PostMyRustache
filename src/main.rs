@@ -67,6 +67,47 @@ impl<W: AsyncWrite + Send + Unpin> AsyncMysqlShim<W> for Backend {
         } else if sql.trim().eq_ignore_ascii_case("set autocommit=1") {
             println!("Intercepted MySQL-specific query, returning dummy response.");
             return results.completed(OkResponse::default()).await;
+        } else if sql.trim().to_lowercase().starts_with("create table") {
+            // Intercepting a MySQL-specific CREATE TABLE query.
+            if sql.contains("INT AUTO_INCREMENT") {
+                println!("Intercepted MySQL-specific query, modifying to PostgreSQL syntax.");
+                let modified_sql = sql.replace("INT AUTO_INCREMENT", "SERIAL");
+                match self.pg_client.execute(&modified_sql, &[]).await {
+                    Ok(_) => {
+                        println!("Table created successfully with modified query.");
+                        return results.completed(OkResponse::default()).await;
+                    },
+                    Err(e) => {
+                        println!("Failed to execute modified query: {:?}", e);
+                        // Handle error...
+                    }
+                }
+            }
+        } else if sql.trim().to_lowercase().starts_with("create database") {
+            // Intercepting a MySQL-specific CREATE DATABASE query.
+            let parts: Vec<&str> = sql.split_whitespace().collect();
+            let db_name_index = parts.iter().position(|&r| r == "database").unwrap_or(0) + 1;
+            let db_name = parts.get(db_name_index).unwrap_or(&"");
+            let db_name = db_name.split_whitespace().next().unwrap_or(""); // Add this line
+            let create_db_query = format!("CREATE DATABASE {}", db_name); 
+            match self.pg_client.execute(&create_db_query, &[]).await {
+                Ok(_) => {
+                    println!("Database {} created successfully.", db_name);
+                    return results.completed(OkResponse::default()).await;
+                },
+                Err(err) => {
+                    if let Some(db_error) = err.as_db_error() {
+                        if db_error.code() == &tokio_postgres::error::SqlState::UNIQUE_VIOLATION {
+                            println!("Database {} already exists.", db_name);
+                        } else {
+                            println!("Failed to execute modified query: {:?}", err);
+                        }
+                    } else {
+                        println!("Failed to execute modified query: {:?}", err);
+                    }
+                    // Handle error...
+                }
+            }
         } else if sql.trim().to_lowercase().starts_with("create database if not exists") {
             // Intercepting a MySQL-specific CREATE DATABASE IF NOT EXISTS query.
             let db_name = sql.trim().split_whitespace().last().unwrap();
@@ -80,6 +121,20 @@ impl<W: AsyncWrite + Send + Unpin> AsyncMysqlShim<W> for Backend {
                     // Handle error...
                 }
             } // Add closing brace here
+        } else if sql.trim().to_lowercase().starts_with("use ") {
+            // Intercepting a MySQL-specific USE DATABASE query.
+            let parts: Vec<&str> = sql.split_whitespace().collect();
+            let db_name = parts.get(1).unwrap_or(&"");
+            let use_db_query = format!("SET search_path TO {}", db_name);
+            match self.pg_client.execute(&use_db_query, &[]).await {
+                Ok(_) => {
+                    println!("Switched to database {} successfully.", db_name);
+                    return results.completed(OkResponse::default()).await;
+                },
+                Err(err) => {
+                    // Handle error...
+                }
+            }
         } else if sql.trim().to_lowercase().contains("database()") {
             // Intercepting a query that contains the MySQL-specific `database()` function.
             let modified_sql = sql.to_lowercase().replace("database()", "current_database()");
@@ -106,8 +161,7 @@ impl<W: AsyncWrite + Send + Unpin> AsyncMysqlShim<W> for Backend {
                     return Err(io::Error::new(io::ErrorKind::Other, "Failed to execute query."));
                 }
             }
-        }
-    
+        } 
         // Rest of the function...
 
     
