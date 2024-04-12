@@ -64,6 +64,9 @@ impl<W: AsyncWrite + Send + Unpin> AsyncMysqlShim<W> for Backend {
             // Intercepting a query that's not compatible with PostgreSQL.
             println!("Intercepted query with unsupported syntax, returning dummy response.");
             return results.completed(OkResponse::default()).await;
+        } else if sql.trim().eq_ignore_ascii_case("set autocommit=1") {
+            println!("Intercepted MySQL-specific query, returning dummy response.");
+            return results.completed(OkResponse::default()).await;
         } else if sql.trim().to_lowercase().starts_with("create database if not exists") {
             // Intercepting a MySQL-specific CREATE DATABASE IF NOT EXISTS query.
             let db_name = sql.trim().split_whitespace().last().unwrap();
@@ -81,6 +84,19 @@ impl<W: AsyncWrite + Send + Unpin> AsyncMysqlShim<W> for Backend {
             // Intercepting a query that contains the MySQL-specific `database()` function.
             let modified_sql = sql.to_lowercase().replace("database()", "current_database()");
             match self.pg_client.execute(&modified_sql, &[]).await {
+                Ok(_) => {
+                    println!("Query executed successfully.");
+                    return results.completed(OkResponse::default()).await;
+                },
+                Err(err) => {
+                    println!("Error executing query: {:?}", err);
+                    return Err(io::Error::new(io::ErrorKind::Other, "Failed to execute query."));
+                }
+            }
+        } else if sql.trim().eq_ignore_ascii_case("select current_user()") {
+            println!("Intercepted MySQL-specific query, returning dummy response.");
+            let current_user_query = "SELECT CURRENT_USER".to_string(); // Convert &str to String
+            match self.pg_client.execute(&current_user_query, &[]).await {
                 Ok(_) => {
                     println!("Query executed successfully.");
                     return results.completed(OkResponse::default()).await;
