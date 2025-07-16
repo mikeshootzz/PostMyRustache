@@ -18,12 +18,57 @@ use tokio_postgres::{Client, NoTls};
 // Backend struct that will implement the AsyncMysqlShim trait and hold a PostgreSQL client.
 struct Backend {
     pg_client: Arc<Client>,
+    mysql_username: String,
+    mysql_password: String,
 }
 
 // Implementation of the AsyncMysqlShim trait for the Backend.
 #[async_trait]
 impl<W: AsyncWrite + Send + Unpin> AsyncMysqlShim<W> for Backend {
     type Error = io::Error;
+
+    // Authentication methods
+    async fn authenticate(
+        &self,
+        _auth_plugin: &str,
+        username: &[u8],
+        _salt: &[u8],
+        _auth_data: &[u8],
+    ) -> bool {
+        let username_str = String::from_utf8_lossy(username);
+        println!("Authentication attempt for user: {}", username_str);
+        
+        // Simple authentication check
+        username_str == self.mysql_username
+    }
+
+    fn default_auth_plugin(&self) -> &str {
+        "mysql_native_password"
+    }
+
+    async fn auth_plugin_for_username(&self, _user: &[u8]) -> &str {
+        "mysql_native_password"
+    }
+
+    fn salt(&self) -> [u8; 20] {
+        let bs = ";X,po_k}o6^Wz!/kM}Na".as_bytes(); // Fixed to be exactly 20 characters
+        let mut scramble: [u8; 20] = [0; 20];
+        for i in 0..20 {
+            scramble[i] = bs[i];
+            if scramble[i] == b'\0' || scramble[i] == b'$' {
+                scramble[i] += 1;
+            }
+        }
+        scramble
+    }
+
+    async fn on_init<'a>(
+        &'a mut self,
+        _: &'a str,
+        _: InitWriter<'a, W>
+    ) -> Result<(), Self::Error> {
+        Ok(())
+    }
 
     async fn on_prepare<'a>(
         &'a mut self,
@@ -96,6 +141,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let db_host = env::var("DB_HOST").expect("DB_HOST must be set");
     let db_user = env::var("DB_USER").expect("DB_USER must be set");
     let db_password = env::var("DB_PASSWORD").expect("DB_PASSWORD must be set");
+    
+    // MySQL authentication credentials
+    let mysql_username = env::var("MYSQL_USERNAME").expect("MYSQL_USERNAME must be set");
+    let mysql_password = env::var("MYSQL_PASSWORD").expect("MYSQL_PASSWORD must be set");
 
     let connection_string = format!("host={} user={} password={}", db_host, db_user, db_password);
 
@@ -129,10 +178,14 @@ _  ____// /_/ /(__  )/ /_ _  /  / / _  /_/ /_  _, _// /_/ /_(__  )/ /_ / /_/ // 
         let (stream, _) = listener.accept().await?;
         let (r, w) = stream.into_split();
         let pg_client_clone = Arc::clone(&pg_client); // Clone the Arc, not the Client.
+        let mysql_username_clone = mysql_username.clone();
+        let mysql_password_clone = mysql_password.clone();
         tokio::spawn(async move {
             if let Err(e) = AsyncMysqlIntermediary::run_on(
                 Backend {
                     pg_client: pg_client_clone,
+                    mysql_username: mysql_username_clone,
+                    mysql_password: mysql_password_clone,
                 },
                 r,
                 w,
