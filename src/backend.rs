@@ -1,9 +1,9 @@
+use async_trait::async_trait;
+use opensrv_mysql::*;
 use std::io;
 use std::sync::Arc;
 use tokio::io::AsyncWrite;
 use tokio_postgres::Client;
-use opensrv_mysql::*;
-use async_trait::async_trait;
 
 use crate::auth::AuthProvider;
 use crate::query::{QueryHandler, QueryResult};
@@ -16,7 +16,7 @@ pub struct Backend {
 impl Backend {
     pub fn new(pg_client: Arc<Client>, auth_provider: AuthProvider) -> Self {
         let query_handler = QueryHandler::new(Arc::clone(&pg_client));
-        
+
         Self {
             auth_provider,
             query_handler,
@@ -43,6 +43,7 @@ impl<W: AsyncWrite + Send + Unpin> AsyncMysqlShim<W> for Backend {
         self.auth_provider.default_auth_plugin()
     }
 
+    #[allow(elided_named_lifetimes)]
     async fn auth_plugin_for_username(&self, _user: &[u8]) -> &str {
         self.auth_provider.default_auth_plugin()
     }
@@ -54,7 +55,7 @@ impl<W: AsyncWrite + Send + Unpin> AsyncMysqlShim<W> for Backend {
     async fn on_init<'a>(
         &'a mut self,
         _: &'a str,
-        _: InitWriter<'a, W>
+        _: InitWriter<'a, W>,
     ) -> Result<(), Self::Error> {
         Ok(())
     }
@@ -86,9 +87,7 @@ impl<W: AsyncWrite + Send + Unpin> AsyncMysqlShim<W> for Backend {
         results: QueryResultWriter<'a, W>,
     ) -> io::Result<()> {
         match self.query_handler.handle_query(sql).await? {
-            QueryResult::Ok(response) => {
-                results.completed(response).await
-            }
+            QueryResult::Ok(response) => results.completed(response).await,
         }
     }
 }

@@ -108,11 +108,17 @@ cargo build
 # Run with logging
 RUST_LOG=debug cargo run
 
-# Run tests
-cargo test
+# Run tests (single-threaded to avoid env var conflicts)
+cargo test -- --test-threads=1
 
 # Format code
 cargo fmt
+
+# Run clippy linting
+cargo clippy
+
+# Security audit
+cargo audit
 ```
 
 ## 🤝 Contributing

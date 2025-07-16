@@ -3,6 +3,10 @@ name = "postmyrustache"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "postmyrustache"
+path = "src/lib.rs"
+
 [dependencies]
 
 tokio = { version = "1.36.0", features = ["full"] }

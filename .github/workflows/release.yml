@@ -6,7 +6,59 @@ on:
       - "v*.*.*"
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
+        components: rustfmt, clippy
+
+    - name: Set up test environment
+      run: |
+        echo "DB_HOST=localhost" >> $GITHUB_ENV
+        echo "DB_USER=postgres" >> $GITHUB_ENV
+        echo "DB_PASSWORD=postgres" >> $GITHUB_ENV
+        echo "MYSQL_USERNAME=admin" >> $GITHUB_ENV
+        echo "MYSQL_PASSWORD=password" >> $GITHUB_ENV
+        echo "BIND_ADDRESS=0.0.0.0:3306" >> $GITHUB_ENV
+        echo "RUST_LOG=info" >> $GITHUB_ENV
+
+    - name: Check formatting
+      run: cargo fmt --all -- --check
+
+    - name: Run clippy
+      run: cargo clippy --all-targets --all-features -- -D warnings
+
+    - name: Build
+      run: cargo build --verbose
+
+    - name: Run tests
+      run: cargo test --verbose -- --test-threads=1
+
   build:
+    needs: test
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
