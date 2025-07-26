@@ -137,7 +137,7 @@ async fn test_multiple_connections() {
         let handle = tokio::spawn(async move {
             match timeout(Duration::from_secs(3), TcpStream::connect(&bind_address)).await {
                 Ok(Ok(_stream)) => {
-                    println!("✓ Connection {} successful", i);
+                    println!("✓ Connection {i} successful");
                     // Keep connection open briefly
                     sleep(Duration::from_millis(100)).await;
                     drop(_stream);
@@ -148,7 +148,7 @@ async fn test_multiple_connections() {
                     false
                 }
                 Err(_) => {
-                    eprintln!("✗ Connection {} timed out", i);
+                    eprintln!("✗ Connection {i} timed out");
                     false
                 }
             }
@@ -166,10 +166,7 @@ async fn test_multiple_connections() {
         }
     }
 
-    println!(
-        "✓ Successfully handled {}/3 concurrent connections",
-        successful_connections
-    );
+    println!("✓ Successfully handled {successful_connections}/3 concurrent connections");
 
     // Abort the server
     server_handle.abort();
@@ -177,6 +174,6 @@ async fn test_multiple_connections() {
     if successful_connections == 3 {
         println!("✓ Multiple connections test passed");
     } else {
-        eprintln!("✗ Only {}/3 connections succeeded", successful_connections);
+        eprintln!("✗ Only {successful_connections}/3 connections succeeded");
     }
 }

@@ -89,11 +89,11 @@ async fn test_comprehensive_mysql_compatibility() {
 
         match query_handler.handle_query(statement).await {
             Ok(_) => {
-                println!("✓ {}: PASSED", test_name);
+                println!("✓ {test_name}: PASSED");
                 passed_tests += 1;
             }
             Err(e) => {
-                println!("✗ {}: FAILED", test_name);
+                println!("✗ {test_name}: FAILED");
                 println!("  Statement: {statement}");
                 println!("  Error: {e}");
                 failed_tests += 1;
@@ -104,8 +104,8 @@ async fn test_comprehensive_mysql_compatibility() {
     println!("\n=== Test Results ===");
     let total = passed_tests + failed_tests;
     println!("Total tests: {total}");
-    println!("Passed: {} ✓", passed_tests);
-    println!("Failed: {} ✗", failed_tests);
+    println!("Passed: {passed_tests} ✓");
+    println!("Failed: {failed_tests} ✗");
 
     if failed_tests == 0 {
         println!("🎉 All tests passed! MySQL compatibility is working correctly.");
@@ -173,7 +173,7 @@ async fn test_mysql_system_queries() {
         }
     }
 
-    println!("\nSystem queries result: {}/{} passed", passed, total);
+    println!("\nSystem queries result: {passed}/{total} passed");
 
     // All system queries should be intercepted and handled
     assert_eq!(passed, total, "All MySQL system queries should be handled");
