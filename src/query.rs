@@ -56,7 +56,7 @@ impl QueryHandler {
                     "Failed to execute query"
                 };
 
-                Err(io::Error::other(format!("{}: {}", error_msg, e)))
+                Err(io::Error::other(format!("{error_msg}: {e}")))
             }
         }
     }
