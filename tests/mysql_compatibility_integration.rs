@@ -20,42 +20,43 @@ fn setup_test_environment() {
 async fn check_postgres_connection() -> Result<(), Box<dyn std::error::Error>> {
     let config = Config::from_env()?;
     let connection_string = config.postgres_connection_string();
-    
-    let (client, connection) = tokio_postgres::connect(&connection_string, tokio_postgres::NoTls).await?;
-    
+
+    let (client, connection) =
+        tokio_postgres::connect(&connection_string, tokio_postgres::NoTls).await?;
+
     // Spawn the connection in a separate task
     tokio::spawn(async move {
         if let Err(e) = connection.await {
             eprintln!("PostgreSQL connection error: {}", e);
         }
     });
-    
+
     // Test connection with a simple query
     client.execute("SELECT 1", &[]).await?;
-    
+
     Ok(())
 }
 
 // Helper function to start PostMyRustache server
 async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
     setup_test_environment();
-    
+
     // Check PostgreSQL connection first
     check_postgres_connection().await?;
-    
+
     let config = Config::from_env()?;
     let server = Server::new(config);
-    
+
     // Start server in background task
     tokio::spawn(async move {
         if let Err(e) = server.start().await {
             eprintln!("Server error: {}", e);
         }
     });
-    
+
     // Give server time to start
     sleep(Duration::from_secs(2)).await;
-    
+
     Ok(())
 }
 
@@ -63,16 +64,20 @@ async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
 fn execute_mysql_command(command: &str) -> Result<String, Box<dyn std::error::Error>> {
     let output = Command::new("mysql")
         .args(&[
-            "-h", "127.0.0.1",
-            "-P", "3307",
-            "-u", "testuser",
+            "-h",
+            "127.0.0.1",
+            "-P",
+            "3307",
+            "-u",
+            "testuser",
             "-ptestpass",
-            "-e", command
+            "-e",
+            command,
         ])
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .output();
-    
+
     match output {
         Ok(result) => {
             if result.status.success() {
@@ -82,7 +87,7 @@ fn execute_mysql_command(command: &str) -> Result<String, Box<dyn std::error::Er
                 Err(format!("MySQL command failed: {}", stderr).into())
             }
         }
-        Err(e) => Err(format!("Failed to execute mysql command: {}", e).into())
+        Err(e) => Err(format!("Failed to execute mysql command: {}", e).into()),
     }
 }
 
@@ -90,10 +95,13 @@ fn execute_mysql_command(command: &str) -> Result<String, Box<dyn std::error::Er
 fn execute_sql_file(file_path: &str) -> Result<String, Box<dyn std::error::Error>> {
     let _output = Command::new("mysql")
         .args(&[
-            "-h", "127.0.0.1",
-            "-P", "3307",
-            "-u", "testuser",
-            "-ptestpass"
+            "-h",
+            "127.0.0.1",
+            "-P",
+            "3307",
+            "-u",
+            "testuser",
+            "-ptestpass",
         ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -102,29 +110,32 @@ fn execute_sql_file(file_path: &str) -> Result<String, Box<dyn std::error::Error
         .stdin
         .take()
         .ok_or("Failed to take stdin")?;
-    
+
     // Read and execute the SQL file
     let sql_content = std::fs::read_to_string(file_path)?;
-    
+
     let mut child = Command::new("mysql")
         .args(&[
-            "-h", "127.0.0.1",
-            "-P", "3307",
-            "-u", "testuser",
-            "-ptestpass"
+            "-h",
+            "127.0.0.1",
+            "-P",
+            "3307",
+            "-u",
+            "testuser",
+            "-ptestpass",
         ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()?;
-    
+
     if let Some(stdin) = child.stdin.as_mut() {
         use std::io::Write;
         stdin.write_all(sql_content.as_bytes())?;
     }
-    
+
     let output = child.wait_with_output()?;
-    
+
     if output.status.success() {
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     } else {
@@ -141,7 +152,7 @@ async fn test_mysql_compatibility_basic_connection() {
         eprintln!("Failed to start server: {}", e);
         return;
     }
-    
+
     // Test basic connection
     match execute_mysql_command("SELECT 1 as test") {
         Ok(output) => {
@@ -162,16 +173,16 @@ async fn test_mysql_version_queries() {
         eprintln!("Failed to start server: {}", e);
         return;
     }
-    
+
     // Test MySQL-specific version queries
     let version_queries = vec![
         "SELECT @@version_comment",
         "SELECT @@sql_mode",
         "SELECT CONNECTION_ID()",
         "SELECT DATABASE()",
-        "SELECT USER()"
+        "SELECT USER()",
     ];
-    
+
     for query in version_queries {
         match execute_mysql_command(query) {
             Ok(output) => {
@@ -192,7 +203,7 @@ async fn test_basic_ddl_operations() {
         eprintln!("Failed to start server: {}", e);
         return;
     }
-    
+
     // Test basic DDL operations
     let ddl_commands = vec![
         "CREATE DATABASE IF NOT EXISTS test_db",
@@ -202,9 +213,9 @@ async fn test_basic_ddl_operations() {
         "SELECT * FROM test_table",
         "UPDATE test_table SET name = 'updated' WHERE id = 1",
         "DELETE FROM test_table WHERE id = 1",
-        "DROP TABLE test_table"
+        "DROP TABLE test_table",
     ];
-    
+
     for command in ddl_commands {
         match execute_mysql_command(command) {
             Ok(output) => {
@@ -224,10 +235,10 @@ async fn test_comprehensive_mysql_compatibility() {
         eprintln!("Failed to start server: {}", e);
         return;
     }
-    
+
     // Execute the comprehensive SQL test file
     let sql_file_path = "tests/mysql_compatibility_test.sql";
-    
+
     match execute_sql_file(sql_file_path) {
         Ok(output) => {
             println!("Comprehensive compatibility test passed!");
@@ -235,22 +246,23 @@ async fn test_comprehensive_mysql_compatibility() {
         }
         Err(e) => {
             eprintln!("Comprehensive compatibility test failed: {}", e);
-            
+
             // Try to execute individual commands to identify specific failures
             println!("Attempting to identify specific compatibility issues...");
-            
+
             // Read the SQL file and try commands one by one
             if let Ok(sql_content) = std::fs::read_to_string(sql_file_path) {
-                let lines: Vec<&str> = sql_content.lines()
+                let lines: Vec<&str> = sql_content
+                    .lines()
                     .filter(|line| !line.trim().is_empty() && !line.trim().starts_with("--"))
                     .collect();
-                
+
                 let mut current_command = String::new();
-                
+
                 for line in lines {
                     current_command.push_str(line);
                     current_command.push(' ');
-                    
+
                     if line.trim().ends_with(';') {
                         // Execute this command
                         match execute_mysql_command(&current_command) {
@@ -281,29 +293,29 @@ async fn test_mysql_data_types() {
         eprintln!("Failed to start server: {}", e);
         return;
     }
-    
+
     let data_type_tests = vec![
         // Integer types
         "CREATE TABLE int_test (id INT, tiny TINYINT, small SMALLINT, big BIGINT)",
         "INSERT INTO int_test VALUES (1, 127, 32767, 9223372036854775807)",
         "SELECT * FROM int_test",
-        
+
         // String types
         "CREATE TABLE string_test (id INT, char_col CHAR(10), varchar_col VARCHAR(255), text_col TEXT)",
         "INSERT INTO string_test VALUES (1, 'test', 'variable text', 'long text content')",
         "SELECT * FROM string_test",
-        
+
         // Date types
         "CREATE TABLE date_test (id INT, date_col DATE, time_col TIME, datetime_col DATETIME)",
         "INSERT INTO date_test VALUES (1, '2024-01-15', '14:30:00', '2024-01-15 14:30:00')",
         "SELECT * FROM date_test",
-        
+
         // Clean up
         "DROP TABLE IF EXISTS int_test",
         "DROP TABLE IF EXISTS string_test", 
         "DROP TABLE IF EXISTS date_test"
     ];
-    
+
     for command in data_type_tests {
         match execute_mysql_command(command) {
             Ok(output) => {
@@ -325,7 +337,7 @@ async fn test_mysql_data_types() {
 #[ignore]
 async fn test_cleanup() {
     setup_test_environment();
-    
+
     // Clean up test data
     if let Ok(_) = execute_mysql_command("DROP DATABASE IF EXISTS test_db") {
         println!("Cleanup completed successfully");

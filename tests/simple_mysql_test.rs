@@ -3,17 +3,15 @@ use std::sync::Arc;
 use tokio_postgres::{Client, NoTls};
 
 async fn setup_postgres_client() -> Result<Arc<Client>, Box<dyn std::error::Error>> {
-    let (client, connection) = tokio_postgres::connect(
-        "host=localhost user=postgres password=1234", 
-        NoTls
-    ).await?;
-    
+    let (client, connection) =
+        tokio_postgres::connect("host=localhost user=postgres password=1234", NoTls).await?;
+
     tokio::spawn(async move {
         if let Err(e) = connection.await {
             eprintln!("PostgreSQL connection error: {}", e);
         }
     });
-    
+
     Ok(Arc::new(client))
 }
 
@@ -27,9 +25,9 @@ async fn test_mysql_specific_queries() {
             return; // Skip test if PostgreSQL is not available
         }
     };
-    
+
     let query_handler = QueryHandler::new(pg_client);
-    
+
     // Test MySQL system variable queries
     let mysql_queries = vec![
         "SELECT @@version_comment",
@@ -43,7 +41,7 @@ async fn test_mysql_specific_queries() {
         "SELECT DATABASE()",
         "SELECT USER()",
     ];
-    
+
     for query in mysql_queries {
         match query_handler.handle_query(query).await {
             Ok(_) => {
@@ -65,36 +63,39 @@ async fn test_mysql_to_postgres_translation() {
             return;
         }
     };
-    
+
     let query_handler = QueryHandler::new(pg_client);
-    
+
     // Test SQL translation capabilities
     let translation_tests = vec![
         (
             "CREATE TABLE test (id INT AUTO_INCREMENT PRIMARY KEY)",
-            "Should translate AUTO_INCREMENT to SERIAL"
+            "Should translate AUTO_INCREMENT to SERIAL",
         ),
         (
             "SELECT * FROM `users` WHERE `name` = 'test'",
-            "Should translate backticks to double quotes"
+            "Should translate backticks to double quotes",
         ),
         (
             "SELECT NOW(), CURDATE(), CURTIME()",
-            "Should translate MySQL date functions"
+            "Should translate MySQL date functions",
         ),
         (
             "CREATE TABLE test (name VARCHAR(255), content LONGTEXT)",
-            "Should translate LONGTEXT to TEXT"
+            "Should translate LONGTEXT to TEXT",
         ),
     ];
-    
+
     for (query, description) in translation_tests {
         match query_handler.handle_query(query).await {
             Ok(_) => {
                 println!("✓ Translation test passed: {} - {}", description, query);
             }
             Err(e) => {
-                println!("✗ Translation test failed: {} - {} - Error: {}", description, query, e);
+                println!(
+                    "✗ Translation test failed: {} - {} - Error: {}",
+                    description, query, e
+                );
             }
         }
     }
@@ -109,9 +110,9 @@ async fn test_basic_sql_operations() {
             return;
         }
     };
-    
+
     let query_handler = QueryHandler::new(pg_client);
-    
+
     // Test basic SQL operations that should work in both MySQL and PostgreSQL
     let basic_queries = vec![
         "CREATE TABLE IF NOT EXISTS test_table (id SERIAL PRIMARY KEY, name VARCHAR(100))",
@@ -122,7 +123,7 @@ async fn test_basic_sql_operations() {
         "DELETE FROM test_table WHERE id = 2",
         "DROP TABLE IF EXISTS test_table",
     ];
-    
+
     for query in basic_queries {
         match query_handler.handle_query(query).await {
             Ok(_) => {
