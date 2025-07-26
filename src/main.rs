@@ -4,7 +4,7 @@ pub mod config;
 pub mod query;
 pub mod server;
 
-use dotenv::dotenv;
+use dotenvy::dotenv;
 
 use config::Config;
 use server::Server;

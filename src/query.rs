@@ -34,7 +34,7 @@ impl QueryHandler {
             }
             Err(e) => {
                 log::error!("Error executing query: {:?}", e);
-                Err(io::Error::other(format!("Failed to execute query: {}", e)))
+                Err(io::Error::other(format!("Failed to execute query: {e}")))
             }
         }
     }
