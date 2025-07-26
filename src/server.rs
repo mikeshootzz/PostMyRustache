@@ -29,7 +29,7 @@ impl Server {
         // Accept connections
         loop {
             let (stream, addr) = listener.accept().await?;
-            log::debug!("New connection from: {}", addr);
+            log::debug!("New connection from: {addr}");
 
             let (r, w) = stream.into_split();
             let pg_client_clone = Arc::clone(&pg_client);
@@ -39,7 +39,7 @@ impl Server {
                 let backend = Backend::new(pg_client_clone, auth_provider);
 
                 if let Err(e) = AsyncMysqlIntermediary::run_on(backend, r, w).await {
-                    log::error!("Connection error: {}", e);
+                    log::error!("Connection error: {e}");
                 }
             });
         }
@@ -47,14 +47,14 @@ impl Server {
 
     async fn connect_to_postgres(&self) -> Result<Arc<Client>, Box<dyn std::error::Error>> {
         let connection_string = self.config.postgres_connection_string();
-        log::info!("Connecting to PostgreSQL: {}", connection_string);
+        log::info!("Connecting to PostgreSQL: {connection_string}");
 
         let (client, connection) = tokio_postgres::connect(&connection_string, NoTls).await?;
 
         // Spawn the connection task
         tokio::spawn(async move {
             if let Err(e) = connection.await {
-                log::error!("PostgreSQL connection error: {}", e);
+                log::error!("PostgreSQL connection error: {e}");
             }
         });
 

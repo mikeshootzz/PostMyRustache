@@ -13,7 +13,7 @@ impl QueryHandler {
     }
 
     pub async fn handle_query(&self, sql: &str) -> io::Result<QueryResult> {
-        log::info!("Received SQL query: {:?}", sql);
+        log::info!("Received SQL query: {sql:?}");
 
         // Check for MySQL-specific queries that need special handling
         if let Some(response) = self.handle_mysql_specific_query(sql) {
@@ -23,7 +23,7 @@ impl QueryHandler {
         // Forward other queries to PostgreSQL
         match self.pg_client.execute(sql, &[]).await {
             Ok(row_count) => {
-                log::info!("Query executed successfully, {} rows affected.", row_count);
+                log::info!("Query executed successfully, {row_count} rows affected.");
 
                 let response = OkResponse {
                     affected_rows: row_count,
@@ -33,7 +33,7 @@ impl QueryHandler {
                 Ok(QueryResult::Ok(response))
             }
             Err(e) => {
-                log::error!("Error executing query: {:?}", e);
+                log::error!("Error executing query: {e:?}");
                 Err(io::Error::other(format!("Failed to execute query: {e}")))
             }
         }

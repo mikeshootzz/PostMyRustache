@@ -10,7 +10,7 @@ impl AuthProvider {
     }
 
     pub fn authenticate(&self, username: &str) -> bool {
-        log::info!("Authentication attempt for user: {}", username);
+        log::info!("Authentication attempt for user: {username}");
         username == self.config.mysql_username
     }
 
