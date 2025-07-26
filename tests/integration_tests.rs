@@ -30,7 +30,7 @@ fn test_config_integration() {
     let connection_string = config.postgres_connection_string();
     assert_eq!(
         connection_string,
-        "host=integration_test_host user=integration_test_user password=integration_test_password"
+        "host=integration_test_host user=integration_test_user password=integration_test_password dbname=postgres"
     );
 
     // Restore original env vars

@@ -5,6 +5,7 @@ pub struct Config {
     pub db_host: String,
     pub db_user: String,
     pub db_password: String,
+    pub db_name: String,
     pub mysql_username: String,
     pub mysql_password: String,
     pub bind_address: String,
@@ -16,6 +17,7 @@ impl Config {
         let db_user = env::var("DB_USER").map_err(|_| ConfigError::MissingEnvVar("DB_USER"))?;
         let db_password =
             env::var("DB_PASSWORD").map_err(|_| ConfigError::MissingEnvVar("DB_PASSWORD"))?;
+        let db_name = env::var("DB_NAME").unwrap_or_else(|_| "postgres".to_string());
         let mysql_username =
             env::var("MYSQL_USERNAME").map_err(|_| ConfigError::MissingEnvVar("MYSQL_USERNAME"))?;
         let mysql_password =
@@ -26,6 +28,7 @@ impl Config {
             db_host,
             db_user,
             db_password,
+            db_name,
             mysql_username,
             mysql_password,
             bind_address,
@@ -34,8 +37,8 @@ impl Config {
 
     pub fn postgres_connection_string(&self) -> String {
         format!(
-            "host={} user={} password={}",
-            self.db_host, self.db_user, self.db_password
+            "host={} user={} password={} dbname={}",
+            self.db_host, self.db_user, self.db_password, self.db_name
         )
     }
 }
@@ -78,6 +81,7 @@ mod tests {
         env::set_var("DB_HOST", "test_host");
         env::set_var("DB_USER", "test_user");
         env::set_var("DB_PASSWORD", "test_password");
+        env::set_var("DB_NAME", "test_db");
         env::set_var("MYSQL_USERNAME", "test_mysql_user");
         env::set_var("MYSQL_PASSWORD", "test_mysql_password");
         env::set_var("BIND_ADDRESS", "127.0.0.1:3307");
@@ -87,6 +91,7 @@ mod tests {
         assert_eq!(config.db_host, "test_host");
         assert_eq!(config.db_user, "test_user");
         assert_eq!(config.db_password, "test_password");
+        assert_eq!(config.db_name, "test_db");
         assert_eq!(config.mysql_username, "test_mysql_user");
         assert_eq!(config.mysql_password, "test_mysql_password");
         assert_eq!(config.bind_address, "127.0.0.1:3307");
@@ -169,6 +174,7 @@ mod tests {
             db_host: "localhost".to_string(),
             db_user: "postgres".to_string(),
             db_password: "password123".to_string(),
+            db_name: "testdb".to_string(),
             mysql_username: "admin".to_string(),
             mysql_password: "secret".to_string(),
             bind_address: "0.0.0.0:3306".to_string(),
@@ -177,7 +183,7 @@ mod tests {
         let connection_string = config.postgres_connection_string();
         assert_eq!(
             connection_string,
-            "host=localhost user=postgres password=password123"
+            "host=localhost user=postgres password=password123 dbname=testdb"
         );
     }
 }

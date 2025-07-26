@@ -40,6 +40,7 @@ mod tests {
             db_host: "localhost".to_string(),
             db_user: "postgres".to_string(),
             db_password: "password".to_string(),
+            db_name: "postgres".to_string(),
             mysql_username: "testuser".to_string(),
             mysql_password: "testpass".to_string(),
             bind_address: "0.0.0.0:3306".to_string(),
