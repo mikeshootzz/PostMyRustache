@@ -1080,6 +1080,7 @@ dependencies = [
  "mysql_common",
  "nom",
  "opensrv-mysql",
+ "regex",
  "tokio",
  "tokio-postgres",
 ]
