@@ -8,7 +8,7 @@ async fn setup_postgres_client() -> Result<Arc<Client>, Box<dyn std::error::Erro
 
     tokio::spawn(async move {
         if let Err(e) = connection.await {
-            eprintln!("PostgreSQL connection error: {}", e);
+            eprintln!("PostgreSQL connection error: {e}");
         }
     });
 
@@ -21,7 +21,7 @@ async fn test_mysql_specific_queries() {
     let pg_client = match setup_postgres_client().await {
         Ok(client) => client,
         Err(e) => {
-            eprintln!("Failed to connect to PostgreSQL: {}", e);
+            eprintln!("Failed to connect to PostgreSQL: {e}");
             return; // Skip test if PostgreSQL is not available
         }
     };
@@ -45,10 +45,10 @@ async fn test_mysql_specific_queries() {
     for query in mysql_queries {
         match query_handler.handle_query(query).await {
             Ok(_) => {
-                println!("✓ MySQL query handled successfully: {}", query);
+                println!("✓ MySQL query handled successfully: {query}");
             }
             Err(e) => {
-                println!("✗ MySQL query failed: {} - Error: {}", query, e);
+                println!("✗ MySQL query failed: {query} - Error: {e}");
             }
         }
     }
@@ -59,7 +59,7 @@ async fn test_mysql_to_postgres_translation() {
     let pg_client = match setup_postgres_client().await {
         Ok(client) => client,
         Err(e) => {
-            eprintln!("Failed to connect to PostgreSQL: {}", e);
+            eprintln!("Failed to connect to PostgreSQL: {e}");
             return;
         }
     };
@@ -89,13 +89,10 @@ async fn test_mysql_to_postgres_translation() {
     for (query, description) in translation_tests {
         match query_handler.handle_query(query).await {
             Ok(_) => {
-                println!("✓ Translation test passed: {} - {}", description, query);
+                println!("✓ Translation test passed: {description} - {query}");
             }
             Err(e) => {
-                println!(
-                    "✗ Translation test failed: {} - {} - Error: {}",
-                    description, query, e
-                );
+                println!("✗ Translation test failed: {description} - {query} - Error: {e}");
             }
         }
     }
@@ -106,7 +103,7 @@ async fn test_basic_sql_operations() {
     let pg_client = match setup_postgres_client().await {
         Ok(client) => client,
         Err(e) => {
-            eprintln!("Failed to connect to PostgreSQL: {}", e);
+            eprintln!("Failed to connect to PostgreSQL: {e}");
             return;
         }
     };
@@ -127,10 +124,10 @@ async fn test_basic_sql_operations() {
     for query in basic_queries {
         match query_handler.handle_query(query).await {
             Ok(_) => {
-                println!("✓ Basic SQL operation succeeded: {}", query);
+                println!("✓ Basic SQL operation succeeded: {query}");
             }
             Err(e) => {
-                println!("✗ Basic SQL operation failed: {} - Error: {}", query, e);
+                println!("✗ Basic SQL operation failed: {query} - Error: {e}");
             }
         }
     }

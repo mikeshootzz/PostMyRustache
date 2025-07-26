@@ -8,7 +8,7 @@ async fn setup_postgres_client() -> Result<Arc<Client>, Box<dyn std::error::Erro
 
     tokio::spawn(async move {
         if let Err(e) = connection.await {
-            eprintln!("PostgreSQL connection error: {}", e);
+            eprintln!("PostgreSQL connection error: {e}");
         }
     });
 
@@ -20,7 +20,7 @@ async fn test_sql_error_fixing() {
     let pg_client = match setup_postgres_client().await {
         Ok(client) => client,
         Err(e) => {
-            eprintln!("Failed to connect to PostgreSQL: {}", e);
+            eprintln!("Failed to connect to PostgreSQL: {e}");
             return;
         }
     };
@@ -46,13 +46,10 @@ async fn test_sql_error_fixing() {
     for (sql, description) in test_cases {
         match query_handler.handle_query(sql).await {
             Ok(_) => {
-                println!("✓ SQL error fixing test passed: {} - {}", description, sql);
+                println!("✓ SQL error fixing test passed: {description} - {sql}");
             }
             Err(e) => {
-                println!(
-                    "✗ SQL error fixing test failed: {} - {} - Error: {}",
-                    description, sql, e
-                );
+                println!("✗ SQL error fixing test failed: {description} - {sql} - Error: {e}");
             }
         }
     }
@@ -63,7 +60,7 @@ async fn test_malformed_sql_handling() {
     let pg_client = match setup_postgres_client().await {
         Ok(client) => client,
         Err(e) => {
-            eprintln!("Failed to connect to PostgreSQL: {}", e);
+            eprintln!("Failed to connect to PostgreSQL: {e}");
             return;
         }
     };
@@ -82,13 +79,10 @@ async fn test_malformed_sql_handling() {
     for query in malformed_queries {
         match query_handler.handle_query(query).await {
             Ok(_) => {
-                println!("? Malformed SQL unexpectedly succeeded: {}", query);
+                println!("? Malformed SQL unexpectedly succeeded: {query}");
             }
             Err(e) => {
-                println!(
-                    "✓ Malformed SQL properly handled with error: {} - Error: {}",
-                    query, e
-                );
+                println!("✓ Malformed SQL properly handled with error: {query} - Error: {e}");
                 // The important thing is that we get an error message, not that the connection drops
             }
         }
@@ -100,7 +94,7 @@ async fn test_malformed_sql_handling() {
             println!("✓ Handler still functional after processing malformed SQL");
         }
         Err(e) => {
-            println!("✗ Handler broken after malformed SQL: {}", e);
+            println!("✗ Handler broken after malformed SQL: {e}");
         }
     }
 }
