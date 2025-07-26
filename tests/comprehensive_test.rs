@@ -8,7 +8,7 @@ async fn setup_postgres_client() -> Result<Arc<Client>, Box<dyn std::error::Erro
 
     tokio::spawn(async move {
         if let Err(e) = connection.await {
-            eprintln!("PostgreSQL connection error: {}", e);
+            eprintln!("PostgreSQL connection error: {e}");
         }
     });
 
@@ -20,7 +20,7 @@ async fn test_comprehensive_mysql_compatibility() {
     let pg_client = match setup_postgres_client().await {
         Ok(client) => client,
         Err(e) => {
-            eprintln!("Failed to connect to PostgreSQL: {}", e);
+            eprintln!("Failed to connect to PostgreSQL: {e}");
             return;
         }
     };
@@ -31,7 +31,7 @@ async fn test_comprehensive_mysql_compatibility() {
     let sql_content = match std::fs::read_to_string("tests/comprehensive_compatibility_test.sql") {
         Ok(content) => content,
         Err(e) => {
-            eprintln!("Failed to read test SQL file: {}", e);
+            eprintln!("Failed to read test SQL file: {e}");
             return;
         }
     };
@@ -55,7 +55,8 @@ async fn test_comprehensive_mysql_compatibility() {
     let mut failed_tests = 0;
 
     println!("Running comprehensive MySQL compatibility test...");
-    println!("Total statements to test: {}", statements.len());
+    let len = statements.len();
+    println!("Total statements to test: {len}");
 
     for (i, statement) in statements.iter().enumerate() {
         if statement.trim().is_empty() {
@@ -93,15 +94,16 @@ async fn test_comprehensive_mysql_compatibility() {
             }
             Err(e) => {
                 println!("✗ {}: FAILED", test_name);
-                println!("  Statement: {}", statement);
-                println!("  Error: {}", e);
+                println!("  Statement: {statement}");
+                println!("  Error: {e}");
                 failed_tests += 1;
             }
         }
     }
 
     println!("\n=== Test Results ===");
-    println!("Total tests: {}", passed_tests + failed_tests);
+    let total = passed_tests + failed_tests;
+    println!("Total tests: {total}");
     println!("Passed: {} ✓", passed_tests);
     println!("Failed: {} ✗", failed_tests);
 
@@ -130,7 +132,7 @@ async fn test_mysql_system_queries() {
     let pg_client = match setup_postgres_client().await {
         Ok(client) => client,
         Err(e) => {
-            eprintln!("Failed to connect to PostgreSQL: {}", e);
+            eprintln!("Failed to connect to PostgreSQL: {e}");
             return;
         }
     };
@@ -162,11 +164,11 @@ async fn test_mysql_system_queries() {
     for query in system_queries {
         match query_handler.handle_query(query).await {
             Ok(_) => {
-                println!("✓ System query handled: {}", query);
+                println!("✓ System query handled: {query}");
                 passed += 1;
             }
             Err(e) => {
-                println!("✗ System query failed: {} - Error: {}", query, e);
+                println!("✗ System query failed: {query} - Error: {e}");
             }
         }
     }

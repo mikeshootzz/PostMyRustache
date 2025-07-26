@@ -27,7 +27,7 @@ async fn check_postgres_connection() -> Result<(), Box<dyn std::error::Error>> {
     // Spawn the connection in a separate task
     tokio::spawn(async move {
         if let Err(e) = connection.await {
-            eprintln!("PostgreSQL connection error: {}", e);
+            eprintln!("PostgreSQL connection error: {e}");
         }
     });
 
@@ -50,7 +50,7 @@ async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
     // Start server in background task
     tokio::spawn(async move {
         if let Err(e) = server.start().await {
-            eprintln!("Server error: {}", e);
+            eprintln!("Server error: {e}");
         }
     });
 
@@ -63,7 +63,7 @@ async fn start_server() -> Result<(), Box<dyn std::error::Error>> {
 // Helper function to execute MySQL commands using mysql client
 fn execute_mysql_command(command: &str) -> Result<String, Box<dyn std::error::Error>> {
     let output = Command::new("mysql")
-        .args(&[
+        .args([
             "-h",
             "127.0.0.1",
             "-P",
@@ -84,17 +84,17 @@ fn execute_mysql_command(command: &str) -> Result<String, Box<dyn std::error::Er
                 Ok(String::from_utf8_lossy(&result.stdout).to_string())
             } else {
                 let stderr = String::from_utf8_lossy(&result.stderr);
-                Err(format!("MySQL command failed: {}", stderr).into())
+                Err(format!("MySQL command failed: {stderr}").into())
             }
         }
-        Err(e) => Err(format!("Failed to execute mysql command: {}", e).into()),
+        Err(e) => Err(format!("Failed to execute mysql command: {e}").into()),
     }
 }
 
 // Helper function to execute SQL file
 fn execute_sql_file(file_path: &str) -> Result<String, Box<dyn std::error::Error>> {
     let _output = Command::new("mysql")
-        .args(&[
+        .args([
             "-h",
             "127.0.0.1",
             "-P",
@@ -115,7 +115,7 @@ fn execute_sql_file(file_path: &str) -> Result<String, Box<dyn std::error::Error
     let sql_content = std::fs::read_to_string(file_path)?;
 
     let mut child = Command::new("mysql")
-        .args(&[
+        .args([
             "-h",
             "127.0.0.1",
             "-P",
@@ -140,7 +140,7 @@ fn execute_sql_file(file_path: &str) -> Result<String, Box<dyn std::error::Error
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        Err(format!("SQL file execution failed: {}", stderr).into())
+        Err(format!("SQL file execution failed: {stderr}").into())
     }
 }
 
@@ -149,18 +149,18 @@ fn execute_sql_file(file_path: &str) -> Result<String, Box<dyn std::error::Error
 async fn test_mysql_compatibility_basic_connection() {
     // This test checks if we can connect to the server using MySQL protocol
     if let Err(e) = start_server().await {
-        eprintln!("Failed to start server: {}", e);
+        eprintln!("Failed to start server: {e}");
         return;
     }
 
     // Test basic connection
     match execute_mysql_command("SELECT 1 as test") {
         Ok(output) => {
-            println!("Basic connection test passed: {}", output);
+            println!("Basic connection test passed: {output}");
             assert!(output.contains("test"));
         }
         Err(e) => {
-            eprintln!("Basic connection test failed: {}", e);
+            eprintln!("Basic connection test failed: {e}");
             panic!("Failed basic connection test");
         }
     }
@@ -170,7 +170,7 @@ async fn test_mysql_compatibility_basic_connection() {
 #[ignore] // Use ignore by default since this requires external dependencies
 async fn test_mysql_version_queries() {
     if let Err(e) = start_server().await {
-        eprintln!("Failed to start server: {}", e);
+        eprintln!("Failed to start server: {e}");
         return;
     }
 
@@ -186,10 +186,10 @@ async fn test_mysql_version_queries() {
     for query in version_queries {
         match execute_mysql_command(query) {
             Ok(output) => {
-                println!("Version query '{}' passed: {}", query, output);
+                println!("Version query '{query}' passed: {output}");
             }
             Err(e) => {
-                eprintln!("Version query '{}' failed: {}", query, e);
+                eprintln!("Version query '{query}' failed: {e}");
                 // Note: Some failures are expected as we may not implement all MySQL functions
             }
         }
@@ -200,7 +200,7 @@ async fn test_mysql_version_queries() {
 #[ignore] // Use ignore by default since this requires external dependencies
 async fn test_basic_ddl_operations() {
     if let Err(e) = start_server().await {
-        eprintln!("Failed to start server: {}", e);
+        eprintln!("Failed to start server: {e}");
         return;
     }
 
@@ -219,10 +219,10 @@ async fn test_basic_ddl_operations() {
     for command in ddl_commands {
         match execute_mysql_command(command) {
             Ok(output) => {
-                println!("DDL command '{}' passed: {}", command, output);
+                println!("DDL command '{command}' passed: {output}");
             }
             Err(e) => {
-                eprintln!("DDL command '{}' failed: {}", command, e);
+                eprintln!("DDL command '{command}' failed: {e}");
             }
         }
     }
@@ -232,7 +232,7 @@ async fn test_basic_ddl_operations() {
 #[ignore] // Use ignore by default since this requires external dependencies
 async fn test_comprehensive_mysql_compatibility() {
     if let Err(e) = start_server().await {
-        eprintln!("Failed to start server: {}", e);
+        eprintln!("Failed to start server: {e}");
         return;
     }
 
@@ -242,10 +242,10 @@ async fn test_comprehensive_mysql_compatibility() {
     match execute_sql_file(sql_file_path) {
         Ok(output) => {
             println!("Comprehensive compatibility test passed!");
-            println!("Output: {}", output);
+            println!("Output: {output}");
         }
         Err(e) => {
-            eprintln!("Comprehensive compatibility test failed: {}", e);
+            eprintln!("Comprehensive compatibility test failed: {e}");
 
             // Try to execute individual commands to identify specific failures
             println!("Attempting to identify specific compatibility issues...");
@@ -267,14 +267,17 @@ async fn test_comprehensive_mysql_compatibility() {
                         // Execute this command
                         match execute_mysql_command(&current_command) {
                             Ok(output) => {
-                                println!("✓ Command succeeded: {}", current_command.trim());
+                                let cmd = current_command.trim();
+                                println!("✓ Command succeeded: {cmd}");
                                 if !output.is_empty() {
-                                    println!("  Output: {}", output.trim());
+                                    let out = output.trim();
+                                    println!("  Output: {out}");
                                 }
                             }
                             Err(e) => {
-                                eprintln!("✗ Command failed: {}", current_command.trim());
-                                eprintln!("  Error: {}", e);
+                                let cmd = current_command.trim();
+                                eprintln!("✗ Command failed: {cmd}");
+                                eprintln!("  Error: {e}");
                             }
                         }
                         current_command.clear();
@@ -290,7 +293,7 @@ async fn test_comprehensive_mysql_compatibility() {
 #[ignore]
 async fn test_mysql_data_types() {
     if let Err(e) = start_server().await {
-        eprintln!("Failed to start server: {}", e);
+        eprintln!("Failed to start server: {e}");
         return;
     }
 
@@ -319,14 +322,14 @@ async fn test_mysql_data_types() {
     for command in data_type_tests {
         match execute_mysql_command(command) {
             Ok(output) => {
-                println!("✓ Data type test passed: {}", command);
+                println!("✓ Data type test passed: {command}");
                 if !output.is_empty() {
-                    println!("  Output: {}", output);
+                    println!("  Output: {output}");
                 }
             }
             Err(e) => {
-                eprintln!("✗ Data type test failed: {}", command);
-                eprintln!("  Error: {}", e);
+                eprintln!("✗ Data type test failed: {command}");
+                eprintln!("  Error: {e}");
             }
         }
     }
@@ -339,7 +342,7 @@ async fn test_cleanup() {
     setup_test_environment();
 
     // Clean up test data
-    if let Ok(_) = execute_mysql_command("DROP DATABASE IF EXISTS test_db") {
+    if execute_mysql_command("DROP DATABASE IF EXISTS test_db").is_ok() {
         println!("Cleanup completed successfully");
     }
 }

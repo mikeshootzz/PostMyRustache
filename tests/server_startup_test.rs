@@ -24,7 +24,7 @@ async fn test_server_startup_and_connection() {
     let config = match Config::from_env() {
         Ok(config) => config,
         Err(e) => {
-            eprintln!("Failed to load config: {}", e);
+            eprintln!("Failed to load config: {e}");
             return;
         }
     };
@@ -36,7 +36,7 @@ async fn test_server_startup_and_connection() {
     let (_pg_client, pg_connection) = match postgres_result {
         Ok((client, connection)) => (client, connection),
         Err(e) => {
-            eprintln!("Failed to connect to PostgreSQL: {}", e);
+            eprintln!("Failed to connect to PostgreSQL: {e}");
             eprintln!("Make sure PostgreSQL is running on localhost:5432 with user 'postgres' and password '1234'");
             return;
         }
@@ -45,7 +45,7 @@ async fn test_server_startup_and_connection() {
     // Spawn PostgreSQL connection
     tokio::spawn(async move {
         if let Err(e) = pg_connection.await {
-            eprintln!("PostgreSQL connection error: {}", e);
+            eprintln!("PostgreSQL connection error: {e}");
         }
     });
 
@@ -55,7 +55,7 @@ async fn test_server_startup_and_connection() {
     let server = Server::new(config.clone());
     let server_handle = tokio::spawn(async move {
         if let Err(e) = server.start().await {
-            eprintln!("Server error: {}", e);
+            eprintln!("Server error: {e}");
         }
     });
 
@@ -80,7 +80,7 @@ async fn test_server_startup_and_connection() {
             drop(_stream);
         }
         Ok(Err(e)) => {
-            eprintln!("✗ Failed to connect to server: {}", e);
+            eprintln!("✗ Failed to connect to server: {e}");
             panic!("Could not connect to PostMyRustache server");
         }
         Err(_) => {
@@ -102,7 +102,7 @@ async fn test_multiple_connections() {
     let config = match Config::from_env() {
         Ok(config) => config,
         Err(e) => {
-            eprintln!("Failed to load config: {}", e);
+            eprintln!("Failed to load config: {e}");
             return;
         }
     };
@@ -110,7 +110,7 @@ async fn test_multiple_connections() {
     // Test PostgreSQL connection first
     let connection_string = config.postgres_connection_string();
     if let Err(e) = tokio_postgres::connect(&connection_string, tokio_postgres::NoTls).await {
-        eprintln!("Failed to connect to PostgreSQL: {}", e);
+        eprintln!("Failed to connect to PostgreSQL: {e}");
         return;
     }
 
@@ -122,7 +122,7 @@ async fn test_multiple_connections() {
     let server = Server::new(config.clone());
     let server_handle = tokio::spawn(async move {
         if let Err(e) = server.start().await {
-            eprintln!("Server error: {}", e);
+            eprintln!("Server error: {e}");
         }
     });
 
@@ -144,7 +144,7 @@ async fn test_multiple_connections() {
                     true
                 }
                 Ok(Err(e)) => {
-                    eprintln!("✗ Connection {} failed: {}", i, e);
+                    eprintln!("✗ Connection {i} failed: {e}");
                     false
                 }
                 Err(_) => {

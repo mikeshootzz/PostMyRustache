@@ -8,7 +8,7 @@ async fn setup_postgres_client() -> Result<Arc<Client>, Box<dyn std::error::Erro
 
     tokio::spawn(async move {
         if let Err(e) = connection.await {
-            eprintln!("PostgreSQL connection error: {}", e);
+            eprintln!("PostgreSQL connection error: {e}");
         }
     });
 
@@ -20,7 +20,7 @@ async fn test_specific_error_case() {
     let pg_client = match setup_postgres_client().await {
         Ok(client) => client,
         Err(e) => {
-            eprintln!("Failed to connect to PostgreSQL: {}", e);
+            eprintln!("Failed to connect to PostgreSQL: {e}");
             return;
         }
     };
@@ -30,14 +30,14 @@ async fn test_specific_error_case() {
     // Test the exact error case from the user
     let problematic_sql = "CREATE TABLE test(name(VARCHAR255))";
 
-    println!("Testing problematic SQL: {}", problematic_sql);
+    println!("Testing problematic SQL: {problematic_sql}");
 
     match query_handler.handle_query(problematic_sql).await {
         Ok(_) => {
             println!("✓ Successfully handled the problematic SQL (after fixing)");
         }
         Err(e) => {
-            println!("✗ Error handling problematic SQL: {}", e);
+            println!("✗ Error handling problematic SQL: {e}");
             println!("  (This is expected - the important thing is we get an error, not a connection drop)");
         }
     }
@@ -45,14 +45,14 @@ async fn test_specific_error_case() {
     // Test that the corrected version works
     let corrected_sql = "CREATE TABLE test_corrected(name VARCHAR(255))";
 
-    println!("\nTesting corrected SQL: {}", corrected_sql);
+    println!("\nTesting corrected SQL: {corrected_sql}");
 
     match query_handler.handle_query(corrected_sql).await {
         Ok(_) => {
             println!("✓ Successfully handled the corrected SQL");
         }
         Err(e) => {
-            println!("✗ Error handling corrected SQL: {}", e);
+            println!("✗ Error handling corrected SQL: {e}");
         }
     }
 
@@ -70,7 +70,7 @@ async fn test_specific_error_case() {
             println!("✓ Handler is still functional after error handling");
         }
         Err(e) => {
-            println!("✗ Handler is broken after error handling: {}", e);
+            println!("✗ Handler is broken after error handling: {e}");
         }
     }
 }
@@ -78,6 +78,13 @@ async fn test_specific_error_case() {
 #[tokio::test]
 async fn test_regex_fixing() {
     use regex::Regex;
+
+    // Compile regex patterns once outside the loop
+    let varchar_re = Regex::new(r"VARCHAR(\d+)").unwrap();
+    let char_re = Regex::new(r"CHAR(\d+)").unwrap();
+    let int_re = Regex::new(r"INT(\d+)").unwrap();
+    let paren_re1 = Regex::new(r"(\w+)\(([A-Z]+\(\d+\))\)").unwrap();
+    let paren_re2 = Regex::new(r"(\w+)\(([A-Z]+)(\d+)\)").unwrap();
 
     // Test the regex patterns directly
     let test_cases = vec![
@@ -94,31 +101,15 @@ async fn test_regex_fixing() {
         let mut fixed = input.to_string();
 
         // Apply the same regex fixes as in the code
-        if let Ok(re) = Regex::new(r"VARCHAR(\d+)") {
-            fixed = re.replace_all(&fixed, "VARCHAR($1)").to_string();
-        }
-
-        if let Ok(re) = Regex::new(r"CHAR(\d+)") {
-            fixed = re.replace_all(&fixed, "CHAR($1)").to_string();
-        }
-
-        if let Ok(re) = Regex::new(r"INT(\d+)") {
-            fixed = re.replace_all(&fixed, "INT($1)").to_string();
-        }
+        fixed = varchar_re.replace_all(&fixed, "VARCHAR($1)").to_string();
+        fixed = char_re.replace_all(&fixed, "CHAR($1)").to_string();
+        fixed = int_re.replace_all(&fixed, "INT($1)").to_string();
 
         // Fix parentheses issues
-        if let Ok(re) = Regex::new(r"(\w+)\(([A-Z]+\(\d+\))\)") {
-            fixed = re.replace_all(&fixed, "$1 $2").to_string();
-        }
+        fixed = paren_re1.replace_all(&fixed, "$1 $2").to_string();
+        fixed = paren_re2.replace_all(&fixed, "$1 $2($3)").to_string();
 
-        if let Ok(re) = Regex::new(r"(\w+)\(([A-Z]+)(\d+)\)") {
-            fixed = re.replace_all(&fixed, "$1 $2($3)").to_string();
-        }
-
-        println!(
-            "Input: {} -> Fixed: {} (Expected: {})",
-            input, fixed, expected
-        );
+        println!("Input: {input} -> Fixed: {fixed} (Expected: {expected})");
 
         if input.contains("VARCHAR255") || input.contains("CHAR10") || input.contains("INT11") {
             // These simple cases should match exactly
